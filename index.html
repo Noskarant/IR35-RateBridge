@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IR35 RateBridge — Outside vs Inside IR35 Rate Comparison</title>
+  <meta name="description" content="Compare Outside IR35 vs Inside IR35 day rates and take-home in seconds. Built for UK recruitment agencies and contractors." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    /* ==== CSS VARIABLES ==== */
+    :root {
+      --bg:           #F6F5F2;
+      --surface:      #FFFFFF;
+      --surface-2:    #F0EEE9;
+      --accent:       #1B3A5C;
+      --accent-light: #E8EFF6;
+      --accent-hover: #142D47;
+      --text:         #1A1915;
+      --text-2:       #6B6960;
+      --text-3:       #9D9B92;
+      --border:       #E2DFD8;
+      --border-s:     #C8C5BC;
+      --green:        #2D6A4F;
+      --green-bg:     #EAF4EE;
+      --green-bd:     #B4D9C3;
+      --amber:        #92580A;
+      --amber-bg:     #FDF3E0;
+      --amber-bd:     #F0C878;
+      --red:          #8B1F1F;
+      --red-bg:       #FAEAEA;
+      --red-bd:       #E8AAAA;
+      --radius:       8px;
+      --radius-lg:    12px;
+      --shadow:       0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --font:         'DM Sans', sans-serif;
+      --mono:         'DM Mono', monospace;
+    }
+
+    /* ==== RESET ==== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ==== HEADER ==== */
+    .site-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 99;
+    }
+    .logo { display: flex; align-items: baseline; gap: 0; }
+    .logo-main { font-size: 16px; font-weight: 600; color: var(--accent); letter-spacing: -0.3px; }
+    .logo-sub  { font-size: 13px; color: var(--text-3); margin-left: 4px; }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .badge {
+      font-size: 10px; font-weight: 600; font-family: var(--mono);
+      letter-spacing: 0.07em; text-transform: uppercase;
+      background: var(--accent-light); color: var(--accent);
+      padding: 3px 8px; border-radius: 4px; border: 1px solid #C8D8E8;
+    }
+    .header-label { font-size: 12px; color: var(--text-3); }
+
+    /* ==== PAGE ==== */
+    .page { max-width: 700px; margin: 0 auto; padding: 36px 20px 72px; }
+
+    /* ==== HERO ==== */
+    .hero { margin-bottom: 32px; }
+    .hero h1 {
+      font-size: 26px; font-weight: 600; letter-spacing: -0.5px;
+      color: var(--text); line-height: 1.25; margin-bottom: 10px;
+    }
+    .hero h1 em { font-style: normal; color: var(--accent); }
+    .hero p { font-size: 15px; color: var(--text-2); line-height: 1.65; max-width: 540px; }
+
+    /* ==== PROOF STRIP ==== */
+    .proof-strip {
+      display: flex; gap: 24px; margin-bottom: 28px; flex-wrap: wrap;
+    }
+    .proof-item {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 13px; color: var(--text-2);
+    }
+    .proof-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent); flex-shrink: 0;
+    }
+
+    /* ==== HOW IT WORKS ==== */
+    .how-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 12px; margin-bottom: 28px;
+    }
+    .how-item {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 14px 12px;
+      box-shadow: var(--shadow);
+    }
+    .how-num {
+      font-size: 11px; font-weight: 600; font-family: var(--mono);
+      color: var(--accent); background: var(--accent-light);
+      width: 22px; height: 22px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 8px;
+    }
+    .how-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+    .how-desc  { font-size: 12px; color: var(--text-2); line-height: 1.5; }
+
+    /* ==== CARD ==== */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    .card-hd {
+      padding: 16px 20px 0; margin-bottom: 18px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-title {
+      font-size: 11px; font-weight: 600; font-family: var(--mono);
+      text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-2);
+    }
+    .card-body { padding: 0 20px 20px; }
+
+    /* ==== FORM ==== */
+    .field { margin-bottom: 18px; }
+    .field:last-child { margin-bottom: 0; }
+    .field-label {
+      display: block; font-size: 13px; font-weight: 500;
+      color: var(--text); margin-bottom: 6px;
+    }
+    .field-label .hint { font-weight: 400; color: var(--text-3); margin-left: 5px; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    /* Input number */
+    .inp-wrap { position: relative; }
+    .inp-pre {
+      position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+      font-size: 14px; font-weight: 500; color: var(--text-2); pointer-events: none;
+    }
+    input[type="number"] {
+      width: 100%; padding: 10px 12px 10px 24px;
+      font-size: 15px; font-weight: 500; font-family: var(--font);
+      color: var(--text); background: var(--surface);
+      border: 1px solid var(--border-s); border-radius: var(--radius);
+      outline: none; transition: border-color .15s, box-shadow .15s;
+      -moz-appearance: textfield;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(27,58,92,.08);
+    }
+    input[type="number"].err { border-color: var(--red); box-shadow: 0 0 0 3px rgba(139,31,31,.08); }
+    .field-err { font-size: 12px; color: var(--red); margin-top: 4px; display: none; }
+    .field-err.show { display: block; }
+
+    /* Scenario pills */
+    .scenario-pills { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .spill input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+    .spill { position: relative; }
+    .spill label {
+      display: block; padding: 12px 14px;
+      border: 1px solid var(--border-s); border-radius: var(--radius);
+      cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text-2);
+      background: var(--surface); transition: all .15s; line-height: 1.35;
+    }
+    .spill label:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+    .spill input:checked + label {
+      border-color: var(--accent); background: var(--accent); color: white;
+    }
+    .pill-tag {
+      display: block; font-size: 10px; font-weight: 400;
+      opacity: .75; margin-top: 2px; font-family: var(--mono);
+      letter-spacing: 0.03em;
+    }
+    .spill input:checked + label .pill-tag { opacity: .85; }
+
+    /* Slider */
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-val {
+      font-size: 14px; font-weight: 600; font-family: var(--mono);
+      color: var(--accent); min-width: 36px; text-align: right;
+    }
+    input[type="range"] {
+      flex: 1; height: 4px; border-radius: 2px;
+      background: var(--border); outline: none;
+      cursor: pointer; -webkit-appearance: none; appearance: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 18px; height: 18px;
+      border-radius: 50%; background: var(--accent);
+      border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,.2);
+      cursor: pointer; transition: transform .1s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+    input[type="range"]::-moz-range-thumb {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--accent); border: 2px solid white;
+      box-shadow: 0 1px 4px rgba(0,0,0,.2); cursor: pointer;
+    }
+
+    /* Button */
+    .btn-calc {
+      width: 100%; padding: 13px 20px;
+      background: var(--accent); color: white; border: none;
+      border-radius: var(--radius); font-size: 15px; font-weight: 600;
+      font-family: var(--font); cursor: pointer; letter-spacing: -0.1px;
+      transition: background .15s, transform .1s; margin-top: 4px;
+    }
+    .btn-calc:hover { background: var(--accent-hover); }
+    .btn-calc:active { transform: scale(.99); }
+
+    /* ==== DIVIDER ==== */
+    .hr { height: 1px; background: var(--border); margin: 0 20px; }
+
+    /* ==== RESULTS ==== */
+    #results { display: none; }
+    #results.show { display: block; }
+
+    .results-top { padding: 20px 20px 0; }
+
+    /* Comparison grid */
+    .compare-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 12px; margin-bottom: 12px;
+    }
+    .cmp-card {
+      border-radius: var(--radius); border: 1px solid var(--border);
+      padding: 14px 16px; background: var(--surface);
+    }
+    .cmp-card.base {
+      border-color: var(--accent); background: var(--accent-light);
+    }
+    .cmp-card.comp { background: var(--surface-2); }
+    .cmp-tag {
+      font-size: 10px; font-weight: 600; font-family: var(--mono);
+      text-transform: uppercase; letter-spacing: .07em;
+      color: var(--text-3); margin-bottom: 2px;
+    }
+    .cmp-card.base .cmp-tag { color: var(--accent); }
+    .cmp-label { font-size: 12px; color: var(--text-2); margin-bottom: 6px; }
+    .cmp-rate {
+      font-size: 20px; font-weight: 600; font-family: var(--mono);
+      color: var(--text); letter-spacing: -0.5px;
+    }
+    .cmp-card.base .cmp-rate { color: var(--accent); }
+    .cmp-take {
+      font-size: 14px; font-weight: 500; color: var(--text);
+      margin-top: 4px; font-family: var(--mono);
+    }
+    .cmp-take-label { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+
+    /* Equivalent rate highlight */
+    .equiv-row {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px; gap: 12px;
+    }
+    .equiv-left { font-size: 13px; color: var(--text-2); line-height: 1.45; }
+    .equiv-left strong { color: var(--text); font-weight: 600; }
+    .equiv-rate {
+      font-size: 22px; font-weight: 600; font-family: var(--mono);
+      color: var(--accent); white-space: nowrap; flex-shrink: 0;
+    }
+    .equiv-sub { font-size: 11px; color: var(--text-3); text-align: right; }
+
+    /* Diff badge */
+    .diff-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 16px; border-radius: var(--radius);
+      border: 1px solid; margin-bottom: 4px;
+    }
+    .diff-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .diff-text { font-size: 13px; font-weight: 500; }
+    .diff-sub  { font-size: 12px; margin-top: 1px; }
+
+    .diff-pos { background: var(--green-bg); border-color: var(--green-bd); }
+    .diff-pos .diff-dot { background: var(--green); }
+    .diff-pos .diff-text { color: var(--green); }
+    .diff-pos .diff-sub  { color: var(--green); opacity: .75; }
+
+    .diff-neg { background: var(--amber-bg); border-color: var(--amber-bd); }
+    .diff-neg .diff-dot { background: var(--amber); }
+    .diff-neg .diff-text { color: var(--amber); }
+    .diff-neg .diff-sub  { color: var(--amber); opacity: .75; }
+
+    .diff-bad { background: var(--red-bg); border-color: var(--red-bd); }
+    .diff-bad .diff-dot { background: var(--red); }
+    .diff-bad .diff-text { color: var(--red); }
+    .diff-bad .diff-sub  { color: var(--red); opacity: .75; }
+
+    /* Summary text */
+    .summary-txt {
+      font-size: 13px; color: var(--text-2); line-height: 1.65;
+      padding: 12px 16px; background: var(--surface-2);
+      border-radius: var(--radius); margin-top: 12px;
+      border-left: 3px solid var(--accent);
+    }
+    .summary-txt strong { color: var(--text); }
+
+    /* Disclaimer */
+    .disclaimer {
+      font-size: 11px; color: var(--text-3); text-align: center;
+      padding: 10px 20px 14px; line-height: 1.55;
+    }
+
+    /* ==== ACTION BUTTONS ==== */
+    .actions { display: flex; gap: 10px; padding: 0 20px 20px; }
+    .btn-pdf {
+      flex: 1; padding: 11px 16px;
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border-s); border-radius: var(--radius);
+      font-size: 13px; font-weight: 500; font-family: var(--font);
+      cursor: pointer; transition: background .15s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn-pdf:hover:not(:disabled) { background: var(--surface-2); }
+    .btn-pdf:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-pilot-act {
+      flex: 1; padding: 11px 16px;
+      background: var(--accent); color: white; border: none;
+      border-radius: var(--radius);
+      font-size: 13px; font-weight: 600; font-family: var(--font);
+      cursor: pointer; transition: background .15s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn-pilot-act:hover { background: var(--accent-hover); }
+
+    /* ==== PILOT CTA ==== */
+    .pilot-cta {
+      background: var(--accent); border-radius: var(--radius-lg);
+      padding: 22px 24px; display: flex;
+      align-items: center; justify-content: space-between; gap: 16px;
+      margin-bottom: 16px;
+    }
+    .pilot-copy h3 { font-size: 16px; font-weight: 600; color: white; margin-bottom: 5px; }
+    .pilot-copy p  { font-size: 13px; color: rgba(255,255,255,.7); line-height: 1.5; }
+    .btn-pilot-main {
+      flex-shrink: 0; padding: 11px 20px;
+      background: white; color: var(--accent); border: none;
+      border-radius: var(--radius); font-size: 13px; font-weight: 600;
+      font-family: var(--font); cursor: pointer; white-space: nowrap;
+      transition: opacity .15s;
+    }
+    .btn-pilot-main:hover { opacity: .9; }
+
+    /* ==== CONTACT BLOCK ==== */
+    .contact-block {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 20px 24px;
+      box-shadow: var(--shadow); margin-bottom: 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px;
+    }
+    .contact-copy h3 { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .contact-copy p  { font-size: 13px; color: var(--text-2); }
+    .contact-copy a  { color: var(--accent); text-decoration: none; font-weight: 500; }
+    .contact-copy a:hover { text-decoration: underline; }
+    .btn-book {
+      flex-shrink: 0; padding: 9px 16px;
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border-s); border-radius: var(--radius);
+      font-size: 12px; font-weight: 500; font-family: var(--font);
+      cursor: pointer; transition: background .15s; white-space: nowrap;
+    }
+    .btn-book:hover { background: var(--surface-2); }
+
+    /* ==== FOOTER ==== */
+    footer {
+      border-top: 1px solid var(--border); padding: 20px;
+      text-align: center; font-size: 12px; color: var(--text-3); line-height: 1.7;
+    }
+    footer a { color: var(--text-3); text-decoration: underline; }
+
+    /* ==== RESPONSIVE ==== */
+    @media (max-width: 500px) {
+      .page { padding: 20px 14px 56px; }
+      .how-grid { grid-template-columns: 1fr; }
+      .scenario-pills { grid-template-columns: 1fr; }
+      .compare-grid { grid-template-columns: 1fr; }
+      .field-row { grid-template-columns: 1fr; }
+      .actions { flex-direction: column; }
+      .pilot-cta { flex-direction: column; }
+      .btn-pilot-main { width: 100%; }
+      .contact-block { flex-direction: column; align-items: flex-start; }
+      .header-label { display: none; }
+      .equiv-row { flex-direction: column; align-items: flex-start; gap: 6px; }
+      .equiv-sub { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ==== HEADER ==== -->
+<header class="site-header">
+  <div class="logo">
+    <span class="logo-main">IR35 RateBridge</span>
+    <span class="logo-sub">.io</span>
+  </div>
+  <div class="header-right">
+    <span class="header-label">Outside vs Inside IR35 Comparison</span>
+    <span class="badge">UK Beta</span>
+  </div>
+</header>
+
+<!-- ==== PAGE ==== -->
+<main class="page">
+
+  <!-- HERO -->
+  <section class="hero">
+    <h1>Compare <em>Outside vs Inside IR35</em><br>take-home in seconds</h1>
+    <p>Enter a day rate, choose your IR35 scenario, and instantly see the take-home difference — plus the equivalent rate needed to bridge the gap. Built for UK contractor recruitment.</p>
+  </section>
+
+  <!-- PROOF STRIP -->
+  <div class="proof-strip">
+    <div class="proof-item"><div class="proof-dot"></div>Built for UK contractor recruitment</div>
+    <div class="proof-item"><div class="proof-dot"></div>Inside vs Outside IR35 in seconds</div>
+    <div class="proof-item"><div class="proof-dot"></div>Shareable PDF deal summary</div>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <div class="how-grid">
+    <div class="how-item">
+      <div class="how-num">1</div>
+      <div class="how-title">Enter day rate</div>
+      <div class="how-desc">Input the contractor's current or proposed day rate in GBP.</div>
+    </div>
+    <div class="how-item">
+      <div class="how-num">2</div>
+      <div class="how-title">Choose IR35 scenario</div>
+      <div class="how-desc">Select whether the base rate is Outside or Inside IR35.</div>
+    </div>
+    <div class="how-item">
+      <div class="how-num">3</div>
+      <div class="how-title">Compare instantly</div>
+      <div class="how-desc">See take-home difference and the equivalent bridging rate.</div>
+    </div>
+  </div>
+
+  <!-- CALCULATOR CARD -->
+  <div class="card">
+    <div class="card-hd">
+      <span class="card-title">Rate Comparison Calculator</span>
+    </div>
+    <div class="card-body">
+
+      <!-- Day rate -->
+      <div class="field">
+        <label class="field-label" for="day-rate-input">
+          Day Rate <span class="hint">£/day</span>
+        </label>
+        <div class="inp-wrap">
+          <span class="inp-pre">£</span>
+          <input type="number" id="day-rate-input" min="50" max="5000"
+            step="10" placeholder="e.g. 500" autocomplete="off" />
+        </div>
+        <div class="field-err" id="rate-err"></div>
+      </div>
+
+      <!-- Base scenario -->
+      <div class="field">
+        <label class="field-label">Base Scenario <span class="hint">— the rate above is...</span></label>
+        <div class="scenario-pills">
+          <div class="spill">
+            <input type="radio" name="scenario" id="sc-outside" value="outside" checked />
+            <label for="sc-outside">
+              Outside IR35
+              <span class="pill-tag">Ltd Company / PSC</span>
+            </label>
+          </div>
+          <div class="spill">
+            <input type="radio" name="scenario" id="sc-inside" value="inside" />
+            <label for="sc-inside">
+              Inside IR35
+              <span class="pill-tag">Deemed employment</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Days per month -->
+      <div class="field">
+        <label class="field-label">Days Per Month</label>
+        <div class="slider-row">
+          <input type="range" id="days-slider" min="15" max="22" step="1" value="20"
+            oninput="document.getElementById('days-val').textContent = this.value + 'd'" />
+          <span class="slider-val" id="days-val">20d</span>
+        </div>
+      </div>
+
+      <!-- Compare button -->
+      <button class="btn-calc" id="btn-compare" onclick="handleCompare()">
+        Compare Scenarios →
+      </button>
+
+    </div><!-- end card-body -->
+
+    <!-- ==== RESULTS ==== -->
+    <div id="results">
+      <div class="hr"></div>
+      <div class="results-top">
+
+        <!-- Compare grid: base vs compared -->
+        <div class="compare-grid">
+          <div class="cmp-card base" id="base-card">
+            <div class="cmp-tag" id="base-tag">Base (Outside IR35)</div>
+            <div class="cmp-label">Your input rate</div>
+            <div class="cmp-rate" id="base-rate-disp">—</div>
+            <div class="cmp-take" id="base-take">—</div>
+            <div class="cmp-take-label">est. take-home / month</div>
+          </div>
+          <div class="cmp-card comp" id="comp-card">
+            <div class="cmp-tag" id="comp-tag">Compared (Inside IR35)</div>
+            <div class="cmp-label">Same rate, different scenario</div>
+            <div class="cmp-rate" id="comp-rate-disp">—</div>
+            <div class="cmp-take" id="comp-take">—</div>
+            <div class="cmp-take-label">est. take-home / month</div>
+          </div>
+        </div>
+
+        <!-- Equivalent rate -->
+        <div class="equiv-row">
+          <div class="equiv-left">
+            <strong id="equiv-label">Equivalent Inside IR35 rate</strong><br>
+            to preserve a similar take-home
+          </div>
+          <div>
+            <div class="equiv-rate" id="equiv-rate-val">—</div>
+            <div class="equiv-sub">/day equivalent</div>
+          </div>
+        </div>
+
+        <!-- Monthly difference -->
+        <div class="diff-row" id="diff-badge">
+          <div class="diff-dot"></div>
+          <div>
+            <div class="diff-text" id="diff-text">—</div>
+            <div class="diff-sub" id="diff-sub">—</div>
+          </div>
+        </div>
+
+        <!-- Summary text -->
+        <div class="summary-txt" id="summary-txt">—</div>
+
+      </div><!-- end results-top -->
+
+      <!-- Disclaimer -->
+      <p class="disclaimer">
+        Estimates only — not tax advice. Based on simplified take-home models (Outside IR35 ≈ 70%, Inside IR35 ≈ 55% of gross).<br>
+        Individual circumstances vary. Always consult a qualified accountant or tax advisor.
+      </p>
+
+      <!-- Action buttons -->
+      <div class="actions">
+        <button class="btn-pdf" id="pdf-btn" onclick="generatePDF()" disabled>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 10v2h10v-2M7 1v7M4 5l3 3 3-3"/></svg>
+          Save Deal Summary
+        </button>
+        <button class="btn-pilot-act" onclick="handlePilotClick()">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M7 1l1.5 3.5L12 5 9.5 7.5 10 11 7 9.5 4 11l.5-3.5L2 5l3.5-.5z"/></svg>
+          Get Branded PDF Exports
+        </button>
+      </div>
+
+    </div><!-- end results -->
+  </div><!-- end calculator card -->
+
+  <!-- PILOT CTA -->
+  <div class="pilot-cta">
+    <div class="pilot-copy">
+      <h3>Ready to use this with your clients?</h3>
+      <p>Join our 3-month pilot and unlock branded PDF exports, priority support, and early access to new features.</p>
+    </div>
+    <button class="btn-pilot-main" onclick="handlePilotClick()">Join the Pilot →</button>
+  </div>
+
+  <!-- CONTACT BLOCK -->
+  <div class="contact-block">
+    <div class="contact-copy">
+      <h3>Want pilot access for your agency?</h3>
+      <p>Email us at <a href="mailto:hello@ir35ratebridge.io">hello@ir35ratebridge.io</a> or book a quick walkthrough.</p>
+    </div>
+    <button class="btn-book" onclick="handleBookClick()">Book a walkthrough</button>
+  </div>
+
+</main>
+
+<!-- ==== FOOTER ==== -->
+<footer>
+  <p>IR35 RateBridge — Outside vs Inside IR35 Rate Comparison Tool<br>
+  UK Beta · Estimates only · Not tax, legal or financial advice<br>
+  <a href="mailto:hello@ir35ratebridge.io">hello@ir35ratebridge.io</a>
+  </p>
+</footer>
+
+<script>
+// ==== CONFIG ====
+const STRIPE_CHECKOUT_URL  = 'https://buy.stripe.com/REPLACE_ME';
+const BOOKING_URL          = 'https://calendly.com/REPLACE_ME';
+const CONTACT_EMAIL        = 'hello@ir35ratebridge.io';
+
+// ==== CONSTANTS ====
+const OUTSIDE_NET_FACTOR = 0.70;
+const INSIDE_NET_FACTOR  = 0.55;
+
+// ==== STATE ====
+let lastResult = null;
+let lastInputs  = null;
+
+// ==== TRACKING ====
+function trackEvent(name, payload = {}) {
+  console.log('[IR35 RateBridge]', name, payload);
+  // Replace with Plausible later: window.plausible(name, { props: payload })
+}
+
+// ==== FORMAT GBP ====
+function formatGBP(amount) {
+  return new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: 'GBP',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(Math.round(amount));
+}
+
+// ==== CALCULATE COMPARISON ====
+function calculateComparison(dayRate, baseScenario, daysPerMonth) {
+  const outsideTakeHome = dayRate * daysPerMonth * OUTSIDE_NET_FACTOR;
+  const insideTakeHome  = dayRate * daysPerMonth * INSIDE_NET_FACTOR;
+
+  // Equivalent rate to preserve same take-home in the other scenario
+  const insideEquivalent  = (outsideTakeHome) / (daysPerMonth * INSIDE_NET_FACTOR);
+  const outsideEquivalent = (insideTakeHome)  / (daysPerMonth * OUTSIDE_NET_FACTOR);
+
+  let baseTakeHome, compTakeHome, equivRate, monthlyDiff;
+
+  if (baseScenario === 'outside') {
+    baseTakeHome  = outsideTakeHome;
+    compTakeHome  = insideTakeHome;
+    equivRate     = insideEquivalent;
+    monthlyDiff   = insideTakeHome - outsideTakeHome; // negative
+  } else {
+    baseTakeHome  = insideTakeHome;
+    compTakeHome  = outsideTakeHome;
+    equivRate     = outsideEquivalent;
+    monthlyDiff   = outsideTakeHome - insideTakeHome; // positive
+  }
+
+  return {
+    baseTakeHome,
+    compTakeHome,
+    equivRate,
+    monthlyDiff,
+    outsideTakeHome,
+    insideTakeHome,
+    insideEquivalent,
+    outsideEquivalent
+  };
+}
+
+// ==== BUILD SUMMARY TEXT ====
+function buildSummaryText(dayRate, baseScenario, result) {
+  const fmtRate   = formatGBP(dayRate);
+  const fmtEquiv  = formatGBP(Math.round(result.equivRate));
+  const fmtDiff   = formatGBP(Math.abs(result.monthlyDiff));
+  const days      = lastInputs.daysPerMonth;
+
+  if (baseScenario === 'outside') {
+    return `A contractor on <strong>${fmtRate}/day Outside IR35</strong> takes home approximately <strong>${formatGBP(result.baseTakeHome)}/month</strong> (${days} days). ` +
+      `If the same role were Inside IR35 at the same rate, take-home drops to roughly <strong>${formatGBP(result.compTakeHome)}/month</strong> — ` +
+      `a difference of <strong>${fmtDiff}/month</strong>. ` +
+      `To preserve a similar take-home, the Inside IR35 rate would need to be approximately <strong>${fmtEquiv}/day</strong>.`;
+  } else {
+    return `A contractor on <strong>${fmtRate}/day Inside IR35</strong> takes home approximately <strong>${formatGBP(result.baseTakeHome)}/month</strong> (${days} days). ` +
+      `The equivalent Outside IR35 rate offering a similar take-home would be around <strong>${fmtEquiv}/day</strong>. ` +
+      `At the same day rate, an Outside IR35 arrangement would yield roughly <strong>${formatGBP(result.compTakeHome)}/month</strong> — ` +
+      `a difference of <strong>${fmtDiff}/month</strong> in the contractor's favour.`;
+  }
+}
+
+// ==== VALIDATE ====
+function validateRate(rawVal) {
+  const errEl  = document.getElementById('rate-err');
+  const inpEl  = document.getElementById('day-rate-input');
+  errEl.classList.remove('show');
+  inpEl.classList.remove('err');
+
+  if (!rawVal || rawVal === '') {
+    errEl.textContent = 'Please enter a day rate.';
+    errEl.classList.add('show'); inpEl.classList.add('err'); return false;
+  }
+  if (parseFloat(rawVal) <= 0) {
+    errEl.textContent = 'Day rate must be greater than zero.';
+    errEl.classList.add('show'); inpEl.classList.add('err'); return false;
+  }
+  if (parseFloat(rawVal) > 5000) {
+    errEl.textContent = 'Please check — above £5,000/day is unusual.';
+    errEl.classList.add('show'); inpEl.classList.add('err'); return false;
+  }
+  return true;
+}
+
+// ==== HANDLE COMPARE ====
+function handleCompare() {
+  const rawRate      = document.getElementById('day-rate-input').value;
+  const baseScenario = document.querySelector('input[name="scenario"]:checked').value;
+  const daysPerMonth = parseInt(document.getElementById('days-slider').value);
+
+  trackEvent('compare_clicked', { baseScenario, daysPerMonth });
+  if (!validateRate(rawRate)) return;
+
+  const dayRate = parseFloat(rawRate);
+  const result  = calculateComparison(dayRate, baseScenario, daysPerMonth);
+
+  lastResult = result;
+  lastInputs  = { dayRate, baseScenario, daysPerMonth };
+
+  renderResults(result, baseScenario, dayRate);
+}
+
+// ==== RENDER RESULTS ====
+function renderResults(result, baseScenario, dayRate) {
+  const isOutsideBase = baseScenario === 'outside';
+
+  // Show results
+  const sec = document.getElementById('results');
+  sec.classList.add('show');
+
+  // Base card
+  document.getElementById('base-tag').textContent        = isOutsideBase ? 'Your Rate — Outside IR35' : 'Your Rate — Inside IR35';
+  document.getElementById('base-rate-disp').textContent  = formatGBP(dayRate) + '/d';
+  document.getElementById('base-take').textContent       = formatGBP(result.baseTakeHome);
+
+  // Compared card
+  document.getElementById('comp-tag').textContent        = isOutsideBase ? 'Same Rate — Inside IR35' : 'Same Rate — Outside IR35';
+  document.getElementById('comp-rate-disp').textContent  = formatGBP(dayRate) + '/d';
+  document.getElementById('comp-take').textContent       = formatGBP(result.compTakeHome);
+
+  // Equivalent rate
+  document.getElementById('equiv-label').textContent     = isOutsideBase
+    ? 'Inside IR35 equivalent rate needed'
+    : 'Outside IR35 equivalent rate for comparison';
+  document.getElementById('equiv-rate-val').textContent  = formatGBP(result.equivRate) + '/d';
+
+  // Monthly diff badge
+  const diffBadge  = document.getElementById('diff-badge');
+  const diffText   = document.getElementById('diff-text');
+  const diffSub    = document.getElementById('diff-sub');
+  const absDiff    = Math.abs(result.monthlyDiff);
+  const pctDiff    = Math.abs(result.monthlyDiff / result.baseTakeHome * 100);
+
+  if (isOutsideBase) {
+    // Inside always less than outside at same rate
+    diffBadge.className = 'diff-row diff-neg';
+    diffText.textContent = formatGBP(absDiff) + '/month less take-home at same rate (Inside IR35)';
+    diffSub.textContent  = '~' + Math.round(pctDiff) + '% reduction in contractor take-home';
+  } else {
+    // Outside more than inside at same rate
+    diffBadge.className = 'diff-row diff-pos';
+    diffText.textContent = formatGBP(absDiff) + '/month more take-home if moved to Outside IR35';
+    diffSub.textContent  = '~' + Math.round(pctDiff) + '% increase in contractor take-home';
+  }
+
+  // Summary text
+  document.getElementById('summary-txt').innerHTML = buildSummaryText(dayRate, baseScenario, result);
+
+  // Enable PDF
+  document.getElementById('pdf-btn').disabled = false;
+
+  // Scroll
+  setTimeout(() => sec.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60);
+}
+
+// ==== GENERATE PDF ====
+function generatePDF() {
+  if (!lastResult || !lastInputs) return;
+  trackEvent('pdf_clicked');
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const W = 210, PG_H = 297;
+  const MG = 18, CW = W - MG * 2;
+
+  const NAVY   = [27, 58, 92];
+  const BLACK  = [26, 25, 21];
+  const MUTED  = [107, 105, 96];
+  const SURF   = [246, 245, 242];
+  const BDR    = [226, 223, 216];
+  const WHITE  = [255, 255, 255];
+  const GREEN  = [45, 106, 79];
+  const AMBER  = [146, 88, 10];
+  const ACBG   = [232, 239, 246];
+
+  const setF = c => doc.setFillColor(...c);
+  const setD = c => doc.setDrawColor(...c);
+  const setT = c => doc.setTextColor(...c);
+
+  function t(s, x, y, sz, col, align='left', bold=false) {
+    doc.setFontSize(sz); setT(col); doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    if (align === 'center') doc.text(s, x, y, { align: 'center' });
+    else if (align === 'right') doc.text(s, x, y, { align: 'right' });
+    else doc.text(s, x, y);
+  }
+
+  function hl(x1, y, x2, col=BDR) {
+    setD(col); doc.setLineWidth(0.3); doc.line(x1, y, x2, y);
+  }
+
+  function row(label, value, y, bold=false) {
+    t(label, MG, y, 9, MUTED);
+    t(value, W - MG, y, 9, BLACK, 'right', bold);
+  }
+
+  // Header
+  setF(NAVY); doc.rect(0, 0, W, 28, 'F');
+  t('IR35 RateBridge', MG, 11, 15, WHITE, 'left', true);
+  t('.io', MG + 32, 11, 12, [160, 180, 200]);
+  t('Deal Summary', MG, 20, 8, [160, 185, 210]);
+  const now = new Date();
+  t('Generated: ' + now.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }), W - MG, 11, 7.5, [160, 185, 210], 'right');
+  t('UK Contractor IR35 Rate Comparison', W - MG, 20, 7.5, [130, 160, 190], 'right');
+
+  let y = 40;
+
+  // Inputs
+  t('DEAL INPUTS', MG, y, 7, MUTED, 'left', true); y += 4;
+  hl(MG, y, W - MG); y += 7;
+  const scLabel = lastInputs.baseScenario === 'outside' ? 'Outside IR35 (Ltd / PSC)' : 'Inside IR35 (Deemed employment)';
+  row('Day Rate', formatGBP(lastInputs.dayRate) + '/day', y); y += 8;
+  row('Base Scenario', scLabel, y); y += 8;
+  row('Days Per Month', lastInputs.daysPerMonth + ' days', y); y += 14;
+
+  // Results
+  t('COMPARISON RESULTS', MG, y, 7, MUTED, 'left', true); y += 4;
+  hl(MG, y, W - MG); y += 7;
+
+  // Base take-home — highlighted
+  setF(ACBG); setD([200, 216, 232]); doc.setLineWidth(0.3);
+  doc.roundedRect(MG, y - 5, CW, 14, 3, 3, 'FD');
+  const baseLabel = lastInputs.baseScenario === 'outside' ? 'Outside IR35 Take-Home (Base)' : 'Inside IR35 Take-Home (Base)';
+  t(baseLabel, MG + 5, y + 1, 8.5, NAVY, 'left', true);
+  t(formatGBP(lastResult.baseTakeHome) + '/month', W - MG - 5, y + 1, 10, NAVY, 'right', true);
+  y += 17;
+
+  const compLabel = lastInputs.baseScenario === 'outside' ? 'Inside IR35 Take-Home (Same Rate)' : 'Outside IR35 Take-Home (Same Rate)';
+  row(compLabel, formatGBP(lastResult.compTakeHome) + '/month', y, true); y += 9;
+  hl(MG, y - 3, W - MG, [240, 237, 230]);
+
+  const equivLabel = lastInputs.baseScenario === 'outside' ? 'Inside Equivalent Rate (to preserve take-home)' : 'Outside Equivalent Rate (for comparison)';
+  row(equivLabel, formatGBP(lastResult.equivRate) + '/day', y + 4, true); y += 13;
+  hl(MG, y - 3, W - MG, [240, 237, 230]);
+
+  const absDiff   = Math.abs(lastResult.monthlyDiff);
+  const pctDiff   = Math.round(Math.abs(lastResult.monthlyDiff / lastResult.baseTakeHome * 100));
+  const diffLabel = lastInputs.baseScenario === 'outside'
+    ? 'Monthly Take-Home Difference (Inside vs Outside)'
+    : 'Monthly Take-Home Difference (Outside vs Inside)';
+  const diffVal   = (lastInputs.baseScenario === 'outside' ? '−' : '+') + formatGBP(absDiff) + '/month (' + pctDiff + '%)';
+  const diffCol   = lastInputs.baseScenario === 'outside' ? AMBER : GREEN;
+  t(diffLabel, MG, y + 4, 8.5, MUTED);
+  t(diffVal, W - MG, y + 4, 9, diffCol, 'right', true);
+  y += 16;
+
+  // Summary
+  t('INTERPRETATION', MG, y, 7, MUTED, 'left', true); y += 4;
+  hl(MG, y, W - MG); y += 6;
+
+  // Strip HTML tags from summary
+  const summaryRaw = document.getElementById('summary-txt').innerText || document.getElementById('summary-txt').textContent;
+  doc.setFontSize(8.5); setT(BLACK); doc.setFont('helvetica', 'normal');
+  const sumLines = doc.splitTextToSize(summaryRaw, CW);
+  sumLines.forEach((ln, i) => { doc.text(ln, MG, y + i * 5); });
+  y += sumLines.length * 5 + 8;
+
+  // Disclaimer
+  hl(MG, y, W - MG); y += 5;
+  const disc = 'Estimates only — not tax, legal or financial advice. These figures are based on simplified take-home models (Outside IR35 ≈ 70%, Inside IR35 ≈ 55% of gross) and are indicative only. Individual results will vary based on personal circumstances, allowable expenses, company structure, and applicable tax rules. Always consult a qualified accountant or tax advisor.';
+  doc.setFontSize(7); setT(MUTED); doc.setFont('helvetica', 'normal');
+  const discLines = doc.splitTextToSize(disc, CW);
+  discLines.forEach((ln, i) => { doc.text(ln, MG, y + i * 4); });
+
+  // Footer
+  setF(SURF); doc.rect(0, PG_H - 14, W, 14, 'F');
+  hl(0, PG_H - 14, W, BDR);
+  t('IR35 RateBridge.io — UK Contractor Rate Comparison', MG, PG_H - 7, 7, MUTED);
+  t('hello@ir35ratebridge.io', W - MG, PG_H - 7, 7, MUTED, 'right');
+
+  const dateSlug = now.toISOString().slice(0, 10);
+  doc.save('ir35-ratebridge-' + lastInputs.baseScenario + '-' + dateSlug + '.pdf');
+}
+
+// ==== HANDLE PILOT CLICK ====
+function handlePilotClick() {
+  trackEvent('pilot_cta_clicked');
+  if (STRIPE_CHECKOUT_URL.includes('REPLACE_ME')) {
+    window.location.href = 'mailto:' + CONTACT_EMAIL + '?subject=IR35 RateBridge Pilot Access&body=Hi, I would like to request pilot access for my agency.';
+  } else {
+    window.open(STRIPE_CHECKOUT_URL, '_blank');
+  }
+}
+
+// ==== HANDLE BOOK CLICK ====
+function handleBookClick() {
+  trackEvent('book_walkthrough_clicked');
+  if (BOOKING_URL.includes('REPLACE_ME')) {
+    window.location.href = 'mailto:' + CONTACT_EMAIL + '?subject=Book a RateBridge Walkthrough';
+  } else {
+    window.open(BOOKING_URL, '_blank');
+  }
+}
+
+// ==== ENTER KEY ==== 
+document.getElementById('day-rate-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleCompare();
+});
+</script>
+
+</body>
+</html>
