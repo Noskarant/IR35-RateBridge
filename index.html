@@ -458,8 +458,8 @@
           <!-- Assumptions -->
           <div class="assump-box">
             <div class="assump-head">
-              <div class="assump-title">Model assumptions (editable)</div>
-              <button class="btn-reset-assump" type="button" onclick="resetAssumptionsToDefaults()">Reset defaults</button>
+              <div class="assump-title" id="assump-title">Model assumptions (editable)</div>
+              <button class="btn-reset-assump" type="button" onclick="resetAssumptionsToDefaults()" id="assump-reset-btn">Reset defaults</button>
             </div>
             <div class="assump-grid">
               <div class="assump-item">
@@ -477,27 +477,27 @@
                 </div>
               </div>
             </div>
-            <div class="assump-help">Estimate-only model. Typical range: 30%–90%.</div>
+            <div class="assump-help" id="assump-help">Estimate-only model. Typical range: 30%–90%.</div>
           </div>
 
           <!-- White-label (PDF only) -->
           <div class="wl-box">
-            <div class="wl-title">PDF white-label (optional)</div>
+            <div class="wl-title" id="wl-title">PDF white-label (optional)</div>
             <div class="wl-grid">
               <div class="wl-field">
-                <label for="wl-agency-name">Agency Name</label>
+                <label for="wl-agency-name" id="wl-agency-label">Agency Name</label>
                 <input type="text" id="wl-agency-name" placeholder="e.g. Brightstone Talent" />
               </div>
               <div class="wl-field">
-                <label for="wl-contact-email">Contact Email</label>
+                <label for="wl-contact-email" id="wl-contact-label">Contact Email</label>
                 <input type="email" id="wl-contact-email" placeholder="e.g. team@agency.com" />
               </div>
               <div class="wl-field wl-full">
-                <label for="wl-logo-url">Logo URL (optional)</label>
+                <label for="wl-logo-url" id="wl-logo-label">Logo URL (optional)</label>
                 <input type="url" id="wl-logo-url" placeholder="https://..." />
               </div>
             </div>
-            <div class="wl-help">Used only in PDF exports. Leave empty to use default RateBridge branding.</div>
+            <div class="wl-help" id="wl-help">Used only in PDF exports. Leave empty to use default RateBridge branding.</div>
           </div>
 
         <!-- Days slider -->
@@ -665,6 +665,14 @@ const COUNTRY_CONFIG = {
     equivSublabel:  'to preserve a similar take-home',
     equivDayLabel:  '/day equivalent',
     contactTitle:   'Want pilot access for your agency?',
+    assumpTitle:    'Model assumptions (editable)',
+    assumpReset:    'Reset defaults',
+    assumpHelp:     'Estimate-only model. Typical range: 30%–90%.',
+    wlTitle:        'PDF white-label (optional)',
+    wlAgencyLabel:  'Agency Name',
+    wlContactLabel: 'Contact Email',
+    wlLogoLabel:    'Logo URL (optional)',
+    wlHelp:         'Used only in PDF exports. Leave empty to use default RateBridge branding.',
     headerLabel:    'UK IR35 Rate Comparison',
     barLabel:       '🇬🇧 United Kingdom — Outside vs Inside IR35',
     pdfHeader:      'UK Contractor IR35 Rate Comparison',
@@ -708,6 +716,14 @@ const COUNTRY_CONFIG = {
     equivSublabel:  'pour un revenu net similaire',
     equivDayLabel:  '/jour équivalent',
     contactTitle:   'Vous voulez accès pilote pour votre agence ?',
+    assumpTitle:    'Hypothèses du modèle (modifiables)',
+    assumpReset:    'Réinitialiser par défaut',
+    assumpHelp:     'Modèle estimatif uniquement. Plage typique : 30%–90%.',
+    wlTitle:        'Marque blanche PDF (optionnel)',
+    wlAgencyLabel:  'Nom de l’agence',
+    wlContactLabel: 'Email de contact',
+    wlLogoLabel:    'URL du logo (optionnel)',
+    wlHelp:         'Utilisé uniquement dans les exports PDF. Laissez vide pour utiliser la marque RateBridge par défaut.',
     headerLabel:    'Comparateur TJM France',
     barLabel:       '🇫🇷 France — Freelance vs Portage salarial',
     pdfHeader:      'Comparateur TJM — France',
@@ -891,6 +907,7 @@ function changeCountry() {
 // ==== APPLY COUNTRY CONFIG ====
 function applyCountryConfig(country) {
   const c = COUNTRY_CONFIG[country];
+  document.documentElement.lang = country === 'fr' ? 'fr' : 'en';
 
   document.getElementById('header-label').textContent   = c.headerLabel;
   document.getElementById('hero-title').innerHTML        = c.heroTitle;
@@ -923,6 +940,14 @@ function applyCountryConfig(country) {
   document.getElementById('equiv-sublabel').textContent  = c.equivSublabel;
   document.getElementById('equiv-day-label').textContent = c.equivDayLabel;
   document.getElementById('contact-title').textContent   = c.contactTitle;
+  document.getElementById('assump-title').textContent    = c.assumpTitle;
+  document.getElementById('assump-reset-btn').textContent = c.assumpReset;
+  document.getElementById('assump-help').textContent     = c.assumpHelp;
+  document.getElementById('wl-title').textContent        = c.wlTitle;
+  document.getElementById('wl-agency-label').textContent = c.wlAgencyLabel;
+  document.getElementById('wl-contact-label').textContent = c.wlContactLabel;
+  document.getElementById('wl-logo-label').textContent   = c.wlLogoLabel;
+  document.getElementById('wl-help').textContent         = c.wlHelp;
   document.getElementById('factor-a-label').textContent  = c.scenarioAName + ' net factor';
   document.getElementById('factor-b-label').textContent  = c.scenarioBName + ' net factor';
 
