@@ -644,7 +644,7 @@ function selectCountry() {
   document.getElementById('app-content').classList.remove('hidden');
 
   applyCountryConfig(selected);
-  resetResults();
+  resetResults(true);
 }
 
 // ==== CHANGE COUNTRY ====
@@ -653,7 +653,7 @@ function changeCountry() {
   document.getElementById('country-selector').classList.remove('hidden');
   document.getElementById('country-bar').classList.remove('show');
   document.getElementById('app-content').classList.add('hidden');
-  resetResults();
+  resetResults(true);
 }
 
 // ==== APPLY COUNTRY CONFIG ====
@@ -794,8 +794,6 @@ function renderResults(result, baseScenario, dayRate) {
   const c       = COUNTRY_CONFIG[currentCountry];
   const isBaseA = baseScenario === 'a';
 
-  document.getElementById('results').classList.add('show');
-  // We reuse 'show' class via display block directly since we use display:none on #results
   document.getElementById('results').style.display = 'block';
 
   // Base card
@@ -855,15 +853,29 @@ function renderResults(result, baseScenario, dayRate) {
 }
 
 // ==== RESET RESULTS ====
-function resetResults() {
+// Options :
+//   clearRate: false par défaut — ne vide pas le champ (utile pour tester rapidement plusieurs cas)
+//   clearRate: true  — à passer explicitement quand on veut un reset complet (ex: changement de pays)
+function resetResults(clearRate = false) {
   document.getElementById('results').style.display = 'none';
   document.getElementById('pdf-btn').disabled      = true;
-  document.getElementById('day-rate-input').value  = '';
-  document.getElementById('rate-err').classList.remove('show');
-  document.getElementById('day-rate-input').classList.remove('err');
-  lastResult = null; lastInputs = null;
+  if (clearRate) {
+    document.getElementById('day-rate-input').value = '';
+    document.getElementById('rate-err').classList.remove('show');
+    document.getElementById('day-rate-input').classList.remove('err');
+  }
+  lastResult = null;
+  lastInputs = null;
 }
 
+// ==== NOTE TYPOGRAPHIQUE ====
+// L'UI utilise Intl.NumberFormat + accents + caracteres riches (normal, rendu navigateur).
+// Le PDF utilise jsPDF avec la police Helvetica embarquee (Latin-1 / ISO 8859-1 uniquement).
+// Helvetica ne supporte pas : emojis, espaces insecables U+202F, guillemets typographiques,
+// tirets longs U+2014, ni les caracteres hors Latin-1.
+// Solution actuelle : formatters ASCII-safe dans generatePDF(), textes sans accents dans STR{}.
+// Pour un PDF premium avec accents et euro natif : embarquer une police TTF Unicode via
+// doc.addFont() + jsPDF plugin ou passer par jsPDF avec polices custom (ex: Roboto, Open Sans).
 // ==== GENERATE PDF ====
 function generatePDF() {
   if (!lastResult || !lastInputs || !currentCountry) return;
@@ -872,12 +884,97 @@ function generatePDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const W = 210, PH = 297, MG = 18, CW = W - MG * 2;
-  const c = COUNTRY_CONFIG[currentCountry];
+  const isUK = currentCountry === 'uk';
+  const c    = COUNTRY_CONFIG[currentCountry];
 
-  const NAVY  = [27,58,92];  const BLACK = [26,25,21];
+  // ==== PDF-SAFE FORMATTERS ====
+  // jsPDF Helvetica only supports Latin-1 (ISO 8859-1).
+  // Intl.NumberFormat with fr-FR uses non-breaking thin spaces (U+202F) between
+  // thousands which renders as garbage. We format manually with ASCII only.
+
+  function fmtAmount(amount) {
+    // Format as integer with comma thousands separator — ASCII safe
+    const n = Math.round(amount);
+    const s = n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return isUK ? ('GBP ' + s) : (s + ' EUR');
+  }
+
+  function fmtRate(amount) {
+    const n = Math.round(amount);
+    const s = n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return isUK ? ('GBP ' + s + '/day') : (s + ' EUR/jour');
+  }
+
+  function fmtPct(pct) {
+    return Math.round(pct) + '%';
+  }
+
+  // ==== PDF-SAFE STRINGS (no accents, no special chars, no emojis) ====
+  const STR = isUK ? {
+    country:        'United Kingdom',
+    dealSummary:    'Deal Summary',
+    generated:      'Generated: ',
+    pdfHeader:      'UK IR35 Rate Comparison',
+    inputs:         'DEAL INPUTS',
+    rateLabel:      'Day Rate',
+    scenLabel:      'Base Scenario',
+    daysLabel:      'Days Per Month',
+    days:           ' days',
+    results:        'COMPARISON RESULTS',
+    baseSuffix:     ' Take-Home (Base)',
+    compSuffix:     ' Take-Home (Same Rate)',
+    equivLabelA:    'Inside IR35 Equivalent Rate',
+    equivLabelB:    'Outside IR35 Equivalent Rate',
+    equivSub:       'to preserve a similar take-home',
+    diffLabel:      'Monthly Take-Home Difference',
+    interp:         'INTERPRETATION',
+    disc:           'Estimates only - not tax advice. Based on simplified models: Outside IR35 approx 70%, Inside IR35 approx 55% of gross. Individual circumstances vary. Consult a qualified accountant or tax advisor.',
+    footerLeft:     'RateBridge.io - UK IR35 Rate Comparison Tool',
+    perMonth:       '/month',
+    scAName:        'Outside IR35 (Ltd / PSC)',
+    scBName:        'Inside IR35 (Deemed employment)',
+    scAShort:       'Outside IR35',
+    scBShort:       'Inside IR35',
+    lessLabel:      'less take-home at same rate',
+    moreLabel:      'more take-home vs compared scenario',
+  } : {
+    country:        'France',
+    dealSummary:    'Resume de simulation',
+    generated:      'Date : ',
+    pdfHeader:      'Comparateur TJM France',
+    inputs:         'PARAMETRES',
+    rateLabel:      'TJM de base',
+    scenLabel:      'Statut de base',
+    daysLabel:      'Jours factures / mois',
+    days:           ' jours',
+    results:        'RESULTATS',
+    baseSuffix:     ' - Revenu net (base)',
+    compSuffix:     ' - Revenu net (meme TJM)',
+    equivLabelA:    'TJM equivalent en portage salarial',
+    equivLabelB:    'TJM equivalent en freelance',
+    equivSub:       'pour un revenu net similaire',
+    diffLabel:      'Difference de revenu net / mois',
+    interp:         'INTERPRETATION',
+    disc:           'Estimations uniquement - pas de conseil fiscal. Modeles simplifies : Freelance EURL/SASU approx 62%, Portage salarial approx 50% du TJM brut. Situations individuelles variables. Consultez un expert-comptable.',
+    footerLeft:     'RateBridge.io - Comparateur TJM France',
+    perMonth:       '/mois',
+    scAName:        'Freelance (EURL / SASU)',
+    scBName:        'Portage salarial',
+    scAShort:       'Freelance',
+    scBShort:       'Portage salarial',
+    lessLabel:      'de revenu net en moins au meme TJM',
+    moreLabel:      'de revenu net supplementaire vs portage',
+  };
+
+  // ==== DATE (ASCII safe) ====
+  const now = new Date();
+  const dateStr = now.getDate() + '/' + (now.getMonth()+1) + '/' + now.getFullYear();
+
+  // ==== COLORS ====
+  const NAVY  = [27,58,92];   const BLACK = [26,25,21];
   const MUTED = [107,105,96]; const SURF  = [246,245,242];
   const BDR   = [226,223,216]; const WHITE = [255,255,255];
-  const GREEN = [45,106,79]; const AMBER  = [146,88,10];
+  const GREEN = [45,106,79];  const AMBER  = [146,88,10];
   const ACBG  = [232,239,246];
 
   const setF = col => doc.setFillColor(...col);
@@ -885,100 +982,120 @@ function generatePDF() {
   const setT = col => doc.setTextColor(...col);
 
   function txt(s, x, y, sz, col, align='left', bold=false) {
+    // Safety: strip any non-latin1 characters to avoid jsPDF encoding glitches
+    const safe = String(s).replace(/[^\x00-\xFF]/g, '');
     doc.setFontSize(sz); setT(col); doc.setFont('helvetica', bold ? 'bold' : 'normal');
-    if (align==='center') doc.text(s,x,y,{align:'center'});
-    else if (align==='right') doc.text(s,x,y,{align:'right'});
-    else doc.text(s,x,y);
+    if (align==='center') doc.text(safe,x,y,{align:'center'});
+    else if (align==='right') doc.text(safe,x,y,{align:'right'});
+    else doc.text(safe,x,y);
   }
-  function hl(x1,y,x2,col=BDR) { setD(col); doc.setLineWidth(0.3); doc.line(x1,y,x2,y); }
-  function row(label,value,y,bold=false) { txt(label,MG,y,9,MUTED); txt(value,W-MG,y,9,BLACK,'right',bold); }
 
-  // Header
+  function hl(x1,y,x2,col=BDR) { setD(col); doc.setLineWidth(0.3); doc.line(x1,y,x2,y); }
+
+  function row(label, value, y, bold=false) {
+    txt(label, MG, y, 9, MUTED);
+    txt(value, W-MG, y, 9, BLACK, 'right', bold);
+  }
+
+  // ==== HEADER ====
   setF(NAVY); doc.rect(0,0,W,28,'F');
   txt('RateBridge', MG, 11, 15, WHITE, 'left', true);
   txt('.io', MG+22, 11, 12, [160,180,200]);
-  txt((currentCountry==='uk'?'🇬🇧 ':'🇫🇷 ') + 'Deal Summary', MG, 20, 8, [160,185,210]);
-  const now = new Date();
-  const dateOpts = currentCountry==='fr'
-    ? { day:'2-digit', month:'long', year:'numeric' }
-    : { day:'2-digit', month:'long', year:'numeric' };
-  txt('Generated: ' + now.toLocaleDateString(c.locale, dateOpts), W-MG, 11, 7.5, [160,185,210], 'right');
-  txt(c.pdfHeader, W-MG, 20, 7.5, [130,160,190], 'right');
+  txt('[' + STR.country + '] ' + STR.dealSummary, MG, 20, 8, [160,185,210]);
+  txt(STR.generated + dateStr, W-MG, 11, 7.5, [160,185,210], 'right');
+  txt(STR.pdfHeader, W-MG, 20, 7.5, [130,160,190], 'right');
 
   let y = 40;
 
-  // Inputs
-  txt(currentCountry==='fr'?'PARAMÈTRES':'DEAL INPUTS', MG, y, 7, MUTED, 'left', true); y+=4;
+  // ==== INPUTS ====
+  txt(STR.inputs, MG, y, 7, MUTED, 'left', true); y+=4;
   hl(MG,y,W-MG); y+=7;
-  const scLabel = lastInputs.baseScenario==='a' ? c.pdfAscenLabel : c.pdfBscenLabel;
-  const rateLabel2 = currentCountry==='fr' ? 'TJM de base' : 'Day Rate';
-  const scenLabel2 = currentCountry==='fr' ? 'Statut de base' : 'Base Scenario';
-  const daysLabel2 = currentCountry==='fr' ? 'Jours facturés / mois' : 'Days Per Month';
-  row(rateLabel2, formatCurrency(lastInputs.dayRate)+c.rateUnit, y); y+=8;
-  row(scenLabel2, scLabel, y); y+=8;
-  row(daysLabel2, lastInputs.daysPerMonth + (currentCountry==='fr'?' jours':' days'), y); y+=14;
+  const scLabel = lastInputs.baseScenario==='a' ? STR.scAName : STR.scBName;
+  row(STR.rateLabel, fmtRate(lastInputs.dayRate), y); y+=8;
+  row(STR.scenLabel, scLabel, y); y+=8;
+  row(STR.daysLabel, lastInputs.daysPerMonth + STR.days, y); y+=14;
 
-  // Results
-  txt(currentCountry==='fr'?'RÉSULTATS':'COMPARISON RESULTS', MG, y, 7, MUTED, 'left', true); y+=4;
+  // ==== RESULTS ====
+  txt(STR.results, MG, y, 7, MUTED, 'left', true); y+=4;
   hl(MG,y,W-MG); y+=7;
 
-  // Base take-home highlighted
+  // Base take-home — highlighted box
   setF(ACBG); setD([200,216,232]); doc.setLineWidth(0.3);
-  doc.roundedRect(MG,y-5,CW,14,3,3,'FD');
-  const baseRowLabel = lastInputs.baseScenario==='a'
-    ? c.scenarioAName + (currentCountry==='fr' ? ' — Revenu net (base)' : ' Take-Home (Base)')
-    : c.scenarioBName + (currentCountry==='fr' ? ' — Revenu net (base)' : ' Take-Home (Base)');
+  doc.roundedRect(MG, y-5, CW, 14, 3, 3, 'FD');
+  const baseRowLabel = (lastInputs.baseScenario==='a' ? STR.scAShort : STR.scBShort) + STR.baseSuffix;
   txt(baseRowLabel, MG+5, y+1, 8.5, NAVY, 'left', true);
-  txt(formatCurrency(lastResult.baseTakeHome)+'/mois', W-MG-5, y+1, 10, NAVY, 'right', true);
+  txt(fmtAmount(lastResult.baseTakeHome) + STR.perMonth, W-MG-5, y+1, 10, NAVY, 'right', true);
   y+=17;
 
-  const compRowLabel = lastInputs.baseScenario==='a'
-    ? c.scenarioBName + (currentCountry==='fr' ? ' — Revenu net (même TJM)' : ' Take-Home (Same Rate)')
-    : c.scenarioAName + (currentCountry==='fr' ? ' — Revenu net (même TJM)' : ' Take-Home (Same Rate)');
-  row(compRowLabel, formatCurrency(lastResult.compTakeHome)+(currentCountry==='fr'?'/mois':'/month'), y, true); y+=9;
+  const compRowLabel = (lastInputs.baseScenario==='a' ? STR.scBShort : STR.scAShort) + STR.compSuffix;
+  row(compRowLabel, fmtAmount(lastResult.compTakeHome) + STR.perMonth, y, true); y+=9;
   hl(MG,y-3,W-MG,[240,237,230]);
 
-  const equivRowLabel = lastInputs.baseScenario==='a'
-    ? (currentCountry==='fr'?'TJM équivalent en '+c.scenarioBName:'Inside Equivalent Rate (to preserve take-home)')
-    : (currentCountry==='fr'?'TJM équivalent en '+c.scenarioAName:'Outside Equivalent Rate (for comparison)');
-  row(equivRowLabel, formatCurrency(lastResult.equivRate)+c.rateUnit, y+4, true); y+=13;
+  const equivRowLabel = lastInputs.baseScenario==='a' ? STR.equivLabelA : STR.equivLabelB;
+  row(equivRowLabel + ' (' + STR.equivSub + ')', fmtRate(lastResult.equivRate), y+4, true); y+=13;
   hl(MG,y-3,W-MG,[240,237,230]);
 
-  const absDiff = Math.abs(lastResult.monthlyDiff);
-  const pctDiff = Math.round(Math.abs(lastResult.monthlyDiff/lastResult.baseTakeHome*100));
-  const diffRowLabel = currentCountry==='fr'
-    ? 'Différence de revenu net / mois'
-    : 'Monthly Take-Home Difference';
-  const diffSign = lastInputs.baseScenario==='a' ? '−' : '+';
-  const diffVal2 = diffSign + formatCurrency(absDiff) + (currentCountry==='fr'?'/mois':'/month') + ' (' + pctDiff + '%)';
-  const diffCol2 = lastInputs.baseScenario==='a' ? AMBER : GREEN;
-  txt(diffRowLabel, MG, y+4, 8.5, MUTED);
-  txt(diffVal2, W-MG, y+4, 9, diffCol2, 'right', true);
+  const absDiff  = Math.abs(lastResult.monthlyDiff);
+  const pctDiff  = Math.round(Math.abs(lastResult.monthlyDiff / lastResult.baseTakeHome * 100));
+  const diffSign = lastInputs.baseScenario==='a' ? '-' : '+';
+  const diffVal  = diffSign + fmtAmount(absDiff) + STR.perMonth + ' (' + fmtPct(pctDiff) + ')';
+  const diffCol  = lastInputs.baseScenario==='a' ? AMBER : GREEN;
+  txt(STR.diffLabel, MG, y+4, 8.5, MUTED);
+  txt(diffVal, W-MG, y+4, 9, diffCol, 'right', true);
   y+=16;
 
-  // Interpretation
-  txt(currentCountry==='fr'?'INTERPRÉTATION':'INTERPRETATION', MG, y, 7, MUTED, 'left', true); y+=4;
-  hl(MG,y,W-MG); y+=6;
-  const summaryRaw = document.getElementById('summary-txt').innerText || document.getElementById('summary-txt').textContent;
-  doc.setFontSize(8.5); setT(BLACK); doc.setFont('helvetica','normal');
-  const sumLines = doc.splitTextToSize(summaryRaw, CW);
-  sumLines.forEach((ln,i) => { doc.text(ln, MG, y+i*5); });
-  y += sumLines.length*5+8;
+  // Context row under diff
+  const diffContext = lastInputs.baseScenario==='a' ? STR.lessLabel : STR.moreLabel;
+  txt(diffContext, W-MG, y+1, 7.5, MUTED, 'right');
+  y+=10;
 
-  // Disclaimer
+  // ==== INTERPRETATION ====
+  txt(STR.interp, MG, y, 7, MUTED, 'left', true); y+=4;
+  hl(MG,y,W-MG); y+=6;
+
+  // Build ASCII-safe interpretation inline (don't use innerHTML from DOM which has special chars)
+  const bRate   = fmtRate(lastInputs.dayRate);
+  const bTake   = fmtAmount(lastResult.baseTakeHome);
+  const cTake   = fmtAmount(lastResult.compTakeHome);
+  const eRate   = fmtRate(lastResult.equivRate);
+  const dAmt    = fmtAmount(absDiff);
+  const dPct    = fmtPct(pctDiff);
+  const days    = lastInputs.daysPerMonth;
+  let interpTxt;
+
+  if (isUK) {
+    if (lastInputs.baseScenario === 'a') {
+      interpTxt = 'A contractor on ' + bRate + ' Outside IR35 takes home approximately ' + bTake + '/month (' + days + ' days). At the same rate Inside IR35, take-home drops to roughly ' + cTake + '/month - a difference of ' + dAmt + '/month (' + dPct + '). To preserve a similar take-home Inside IR35, the rate would need to be approximately ' + eRate + '.';
+    } else {
+      interpTxt = 'A contractor on ' + bRate + ' Inside IR35 takes home approximately ' + bTake + '/month (' + days + ' days). The equivalent Outside IR35 rate offering a similar take-home would be around ' + eRate + '. At the same rate Outside IR35, take-home would be ' + cTake + '/month - a difference of ' + dAmt + '/month (' + dPct + ') in the contractor\'s favour.';
+    }
+  } else {
+    if (lastInputs.baseScenario === 'a') {
+      interpTxt = 'Un consultant avec un TJM de ' + bRate + ' en Freelance (EURL/SASU) percoit environ ' + bTake + '/mois (' + days + ' jours). Au meme TJM en portage salarial, le revenu net tombe a environ ' + cTake + '/mois - soit une difference de ' + dAmt + '/mois (' + dPct + '). Pour un revenu net similaire en portage, le TJM devrait etre d\'environ ' + eRate + '.';
+    } else {
+      interpTxt = 'Un consultant avec un TJM de ' + bRate + ' en portage salarial percoit environ ' + bTake + '/mois (' + days + ' jours). Le TJM Freelance (EURL/SASU) equivalent serait d\'environ ' + eRate + '. Au meme TJM en freelance, le revenu net serait de ' + cTake + '/mois - soit ' + dAmt + '/mois supplementaires (' + dPct + ').';
+    }
+  }
+
+  doc.setFontSize(8.5); setT(BLACK); doc.setFont('helvetica','normal');
+  const interpLines = doc.splitTextToSize(interpTxt, CW);
+  interpLines.forEach((ln,i) => { doc.text(ln, MG, y+i*5); });
+  y += interpLines.length * 5 + 8;
+
+  // ==== DISCLAIMER ====
   hl(MG,y,W-MG); y+=5;
   doc.setFontSize(7); setT(MUTED); doc.setFont('helvetica','normal');
-  const discLines = doc.splitTextToSize(c.disclaimer, CW);
+  const discLines = doc.splitTextToSize(STR.disc, CW);
   discLines.forEach((ln,i) => { doc.text(ln, MG, y+i*4); });
 
-  // Footer
+  // ==== FOOTER ====
   setF(SURF); doc.rect(0,PH-14,W,14,'F');
   hl(0,PH-14,W,BDR);
-  txt('RateBridge.io — Contractor Rate Comparison', MG, PH-7, 7, MUTED);
+  txt(STR.footerLeft, MG, PH-7, 7, MUTED);
   txt(CONTACT_EMAIL, W-MG, PH-7, 7, MUTED, 'right');
 
   const dateSlug = now.toISOString().slice(0,10);
-  doc.save(c.pdfFileName+'-'+lastInputs.baseScenario+'-'+dateSlug+'.pdf');
+  doc.save(c.pdfFileName + '-' + lastInputs.baseScenario + '-' + dateSlug + '.pdf');
 }
 
 // ==== HANDLE PILOT CLICK ====
