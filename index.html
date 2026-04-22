@@ -134,6 +134,28 @@
     .how-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
     .how-desc  { font-size: 12px; color: var(--text-2); line-height: 1.5; }
 
+    /* Premium positioning */
+    .premium-top {
+      background: linear-gradient(135deg, #1B3A5C 0%, #234A74 100%);
+      border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 20px;
+      color: white; box-shadow: var(--shadow);
+    }
+    .premium-top-tag {
+      display: inline-block; font-size: 10px; font-family: var(--mono); letter-spacing: .07em;
+      text-transform: uppercase; background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
+      padding: 3px 7px; border-radius: 4px; margin-bottom: 8px;
+    }
+    .premium-top h3 { font-size: 18px; line-height: 1.3; margin-bottom: 6px; }
+    .premium-top p { font-size: 13px; color: rgba(255,255,255,.84); line-height: 1.55; margin-bottom: 11px; }
+    .premium-top-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; margin-bottom: 12px; }
+    .premium-top-item { font-size: 12px; color: rgba(255,255,255,.92); }
+    .premium-top-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .btn-upgrade-top {
+      padding: 11px 16px; border: none; border-radius: 8px; background: white; color: var(--accent);
+      font-size: 13px; font-weight: 700; cursor: pointer; font-family: var(--font);
+    }
+    .preview-note { font-size: 12px; color: rgba(255,255,255,.8); }
+
     /* ==== CARD ==== */
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); margin-bottom: 16px; }
     .card-hd { padding: 16px 20px 0; margin-bottom: 18px; }
@@ -370,6 +392,7 @@
       .equiv-sub { text-align: left; }
       .country-pills { grid-template-columns: 1fr; }
       .plan-grid { grid-template-columns: 1fr; }
+      .premium-top-list { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -444,6 +467,23 @@
       <div class="proof-item"><div class="proof-dot"></div><span id="proof-3">Shareable PDF deal summary</span></div>
     </div>
 
+    <!-- Premium positioning -->
+    <section class="premium-top">
+      <span class="premium-top-tag" id="premium-top-tag">Free Preview + Agency Upgrade</span>
+      <h3 id="premium-top-title">Use the free preview now. Upgrade when you need recruiter-ready delivery.</h3>
+      <p id="premium-top-copy">Compare rates instantly in this pilot preview, then unlock the agency version to send polished branded summaries to clients, candidates, and internal stakeholders.</p>
+      <div class="premium-top-list">
+        <div class="premium-top-item" id="premium-li-1">✓ Agency-branded PDF summaries</div>
+        <div class="premium-top-item" id="premium-li-2">✓ Cleaner client/candidate presentation</div>
+        <div class="premium-top-item" id="premium-li-3">✓ Recruiter-ready export format</div>
+        <div class="premium-top-item" id="premium-li-4">✓ Pilot onboarding + early feature access</div>
+      </div>
+      <div class="premium-top-actions">
+        <button class="btn-upgrade-top" onclick="handlePilotClick()" id="premium-top-btn">Unlock Agency Version</button>
+        <span class="preview-note" id="premium-preview-note">Free preview remains fully usable for core comparison.</span>
+      </div>
+    </section>
+
     <!-- HOW IT WORKS -->
     <div class="how-grid">
       <div class="how-item">
@@ -466,7 +506,7 @@
     <!-- CALCULATOR CARD -->
     <div class="card">
       <div class="card-hd">
-        <span class="card-title" id="calc-title">Rate Comparison Calculator</span>
+        <span class="card-title" id="calc-title">Rate Comparison Calculator — Free Preview</span>
       </div>
       <div class="card-body">
 
@@ -745,13 +785,22 @@ const COUNTRY_CONFIG = {
     proof1:         'Built for UK contractor recruitment',
     proof2:         'Inside vs Outside IR35 in seconds',
     proof3:         'Shareable PDF deal summary',
+    premiumTopTag:  'Free Preview + Agency Upgrade',
+    premiumTopTitle:'Use the free preview now. Upgrade when you need recruiter-ready delivery.',
+    premiumTopCopy: 'Compare rates instantly in this pilot preview, then unlock the agency version to send polished branded summaries to clients, candidates, and internal stakeholders.',
+    premiumLi1:     '✓ Agency-branded PDF summaries',
+    premiumLi2:     '✓ Cleaner client/candidate presentation',
+    premiumLi3:     '✓ Recruiter-ready export format',
+    premiumLi4:     '✓ Pilot onboarding + early feature access',
+    premiumTopBtn:  'Unlock Agency Version',
+    premiumPreviewNote:'Free preview remains fully usable for core comparison.',
     how1Title:      'Enter day rate',
     how1Desc:       'Input the contractor\'s current or proposed day rate in GBP.',
     how2Title:      'Choose IR35 scenario',
     how2Desc:       'Select whether the base rate is Outside or Inside IR35.',
     how3Title:      'Compare instantly',
     how3Desc:       'See take-home difference and the equivalent bridging rate.',
-    calcTitle:      'Rate Comparison Calculator',
+    calcTitle:      'Rate Comparison Calculator — Free Preview',
     rateLabel:      'Day Rate',
     rateHint:       '£/day',
     scenarioLabel:  'Base Scenario',
@@ -798,13 +847,22 @@ const COUNTRY_CONFIG = {
     proof1:         'Pour le recrutement de consultants en France',
     proof2:         'Freelance vs Portage salarial en secondes',
     proof3:         'Résumé PDF partageable',
+    premiumTopTag:  'Aperçu gratuit + version agence',
+    premiumTopTitle:'Utilisez l’aperçu gratuit maintenant. Passez à la version agence pour une restitution premium.',
+    premiumTopCopy: 'Comparez rapidement dans cet aperçu pilote, puis débloquez la version agence pour partager des résumés professionnels avec clients, candidats et équipes internes.',
+    premiumLi1:     '✓ Résumés PDF aux couleurs de votre agence',
+    premiumLi2:     '✓ Présentation plus professionnelle client/candidat',
+    premiumLi3:     '✓ Format prêt à l’emploi pour recruteurs',
+    premiumLi4:     '✓ Onboarding pilote + accès anticipé',
+    premiumTopBtn:  'Débloquer la version agence',
+    premiumPreviewNote:'L’aperçu gratuit reste pleinement utilisable pour la comparaison de base.',
     how1Title:      'Entrez le TJM',
     how1Desc:       'Saisissez le taux journalier moyen actuel ou proposé en euros.',
     how2Title:      'Choisissez le statut',
     how2Desc:       'Indiquez si le TJM de base est en Freelance (EURL/SASU) ou en Portage salarial.',
     how3Title:      'Comparez immédiatement',
     how3Desc:       'Visualisez l’écart de revenu net et le TJM équivalent de compensation.',
-    calcTitle:      'Comparateur de TJM',
+    calcTitle:      'Comparateur de TJM — Aperçu gratuit',
     rateLabel:      'TJM (Taux Journalier Moyen)',
     rateHint:       '€/jour',
     scenarioLabel:  'Statut de base',
@@ -1061,6 +1119,15 @@ function applyCountryConfig(country) {
   document.getElementById('proof-1').textContent         = c.proof1;
   document.getElementById('proof-2').textContent         = c.proof2;
   document.getElementById('proof-3').textContent         = c.proof3;
+  document.getElementById('premium-top-tag').textContent = c.premiumTopTag;
+  document.getElementById('premium-top-title').textContent = c.premiumTopTitle;
+  document.getElementById('premium-top-copy').textContent = c.premiumTopCopy;
+  document.getElementById('premium-li-1').textContent    = c.premiumLi1;
+  document.getElementById('premium-li-2').textContent    = c.premiumLi2;
+  document.getElementById('premium-li-3').textContent    = c.premiumLi3;
+  document.getElementById('premium-li-4').textContent    = c.premiumLi4;
+  document.getElementById('premium-top-btn').textContent = c.premiumTopBtn;
+  document.getElementById('premium-preview-note').textContent = c.premiumPreviewNote;
   document.getElementById('how-1-title').textContent     = c.how1Title;
   document.getElementById('how-1-desc').textContent      = c.how1Desc;
   document.getElementById('how-2-title').textContent     = c.how2Title;
