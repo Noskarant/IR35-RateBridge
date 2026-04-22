@@ -334,7 +334,7 @@
   </div>
   <div class="header-right">
     <span class="header-label" id="header-label">UK & France Rate Comparison</span>
-    <span class="badge">Beta</span>
+    <span class="badge">Pilot</span>
   </div>
 </header>
 
@@ -458,7 +458,7 @@
           <!-- Assumptions -->
           <div class="assump-box">
             <div class="assump-head">
-              <div class="assump-title" id="assump-title">Model assumptions (editable)</div>
+              <div class="assump-title" id="assump-title">Take-home assumptions (quick estimate)</div>
               <button class="btn-reset-assump" type="button" onclick="resetAssumptionsToDefaults()" id="assump-reset-btn">Reset defaults</button>
             </div>
             <div class="assump-grid">
@@ -477,7 +477,7 @@
                 </div>
               </div>
             </div>
-            <div class="assump-help" id="assump-help">Estimate-only model. Typical range: 30%–90%.</div>
+            <div class="assump-help" id="assump-help">Use your best market estimate to frame client conversations.</div>
           </div>
 
           <!-- White-label (PDF only) -->
@@ -574,9 +574,10 @@
           </button>
           <button class="btn-pilot-act" onclick="handlePilotClick()">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M7 1l1.5 3.5L12 5 9.5 7.5 10 11 7 9.5 4 11l.5-3.5L2 5l3.5-.5z"/></svg>
-            Get Branded PDF Exports
+            Get Agency-Branded PDF Exports
           </button>
         </div>
+        <div class="field-err" id="pdf-error" style="padding:0 20px 14px; margin-top:0;"></div>
 
       </div><!-- end results -->
     </div><!-- end card -->
@@ -584,10 +585,10 @@
     <!-- PILOT CTA -->
     <div class="pilot-cta">
       <div class="pilot-copy">
-        <h3>Ready to use this with your clients?</h3>
-        <p>Join our 3-month pilot and unlock branded PDF exports, priority support, and early access to new features.</p>
+        <h3>Ready for recruiter-ready client summaries?</h3>
+        <p>Join the agency pilot to unlock client-ready branded PDF exports and priority support.</p>
       </div>
-      <button class="btn-pilot-main" onclick="handlePilotClick()">Join the Pilot →</button>
+      <button class="btn-pilot-main" onclick="handlePilotClick()">Join Agency Pilot →</button>
     </div>
 
     <!-- CONTACT -->
@@ -626,6 +627,8 @@ const STRIPE_CHECKOUT_URL = RUNTIME_CONFIG.stripeCheckoutUrl || APP_CONFIG.strip
 const BOOKING_URL         = RUNTIME_CONFIG.bookingUrl || APP_CONFIG.bookingUrl;
 const PLAUSIBLE_DOMAIN    = RUNTIME_CONFIG.plausibleDomain || APP_CONFIG.plausibleDomain;
 const CONTACT_EMAIL       = 'hello@ratebridge.io';
+const URL_PARAMS          = new URLSearchParams(window.location.search);
+const UK_ONLY_MODE        = URL_PARAMS.get('uk_only') === '1';
 
 // ==== COUNTRY CONFIG ====
 const COUNTRY_CONFIG = {
@@ -659,15 +662,17 @@ const COUNTRY_CONFIG = {
     daysLabel:      'Days Per Month',
     btnLabel:       'Compare Scenarios →',
     pdfBtnLabel:    'Save Deal Summary',
+    pdfGeneratingLabel:'Generating PDF...',
+    pdfErrorLabel:  'PDF generation failed. Please check inputs and try again.',
     disclaimer:     'Estimates only — not tax advice. Based on simplified take-home models (Outside IR35 ≈ 70%, Inside IR35 ≈ 55% of gross). Individual circumstances vary. Always consult a qualified accountant or tax advisor.',
     baseTakeLabel:  'est. take-home / month',
     compTakeLabel:  'est. take-home / month',
     equivSublabel:  'to preserve a similar take-home',
     equivDayLabel:  '/day equivalent',
     contactTitle:   'Want pilot access for your agency?',
-    assumpTitle:    'Model assumptions (editable)',
+    assumpTitle:    'Take-home assumptions (quick estimate)',
     assumpReset:    'Reset defaults',
-    assumpHelp:     'Estimate-only model. Typical range: 30%–90%.',
+    assumpHelp:     'Use your best market estimate to frame client conversations.',
     wlTitle:        'PDF white-label (optional)',
     wlAgencyLabel:  'Agency Name',
     wlContactLabel: 'Contact Email',
@@ -710,15 +715,17 @@ const COUNTRY_CONFIG = {
     daysLabel:      'Jours facturés par mois',
     btnLabel:       'Comparer les scénarios →',
     pdfBtnLabel:    'Sauvegarder le résumé',
+    pdfGeneratingLabel:'Génération du PDF...',
+    pdfErrorLabel:  'Échec de génération du PDF. Vérifiez les données puis réessayez.',
     disclaimer:     'Estimations uniquement — pas de conseil fiscal. Basé sur des modèles simplifiés (Freelance EURL/SASU ≈ 62%, Portage salarial ≈ 50% du TJM brut). Les situations individuelles varient. Consultez toujours un expert-comptable.',
     baseTakeLabel:  'rev. net estimé / mois',
     compTakeLabel:  'rev. net estimé / mois',
     equivSublabel:  'pour un revenu net similaire',
     equivDayLabel:  '/jour équivalent',
     contactTitle:   'Vous voulez accès pilote pour votre agence ?',
-    assumpTitle:    'Hypothèses du modèle (modifiables)',
+    assumpTitle:    'Hypothèses de revenu net (estimation rapide)',
     assumpReset:    'Réinitialiser par défaut',
-    assumpHelp:     'Modèle estimatif uniquement. Plage typique : 30%–90%.',
+    assumpHelp:     'Utilisez votre meilleure estimation marché pour vos échanges clients.',
     wlTitle:        'Marque blanche PDF (optionnel)',
     wlAgencyLabel:  'Nom de l’agence',
     wlContactLabel: 'Email de contact',
@@ -859,8 +866,14 @@ async function loadPdfLogo(logoUrl) {
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
+    const dimensions = await new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => resolve({ width: img.naturalWidth || 1, height: img.naturalHeight || 1 });
+      img.onerror = () => resolve({ width: 1, height: 1 });
+      img.src = dataUrl;
+    });
     const format = blob.type.includes('png') ? 'PNG' : 'JPEG';
-    return { dataUrl, format };
+    return { dataUrl, format, ...dimensions };
   } catch {
     return null;
   }
@@ -901,6 +914,17 @@ function changeCountry() {
   document.getElementById('country-selector').classList.remove('hidden');
   document.getElementById('country-bar').classList.remove('show');
   document.getElementById('app-content').classList.add('hidden');
+  resetResults(true);
+}
+
+function initOutreachVariant() {
+  if (!UK_ONLY_MODE) return;
+  currentCountry = 'uk';
+  document.getElementById('country-selector').classList.add('hidden');
+  document.getElementById('country-bar').classList.remove('show');
+  document.getElementById('country-bar').classList.add('hidden');
+  document.getElementById('app-content').classList.remove('hidden');
+  applyCountryConfig('uk');
   resetResults(true);
 }
 
@@ -1172,38 +1196,51 @@ function resetResults(clearRate = false) {
 async function generatePDF() {
   if (!lastResult || !lastInputs || !currentCountry) return;
   trackEvent('pdf_clicked', { country: currentCountry });
+  const cfg = COUNTRY_CONFIG[currentCountry];
+  const pdfBtn = document.getElementById('pdf-btn');
+  const pdfBtnLabel = document.getElementById('pdf-btn-label');
+  const pdfErr = document.getElementById('pdf-error');
+  const defaultBtnLabel = cfg.pdfBtnLabel;
+  const loadingBtnLabel = cfg.pdfGeneratingLabel || 'Generating PDF...';
+  const errorLabel = cfg.pdfErrorLabel || 'PDF generation failed. Please try again.';
 
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const hasUnicodeFont = await registerUnicodePdfFont(doc);
-  const PDF_FONT = hasUnicodeFont ? 'NotoSans' : 'helvetica';
-  const W = 210, PH = 297, MG = 18, CW = W - MG * 2;
-  const isUK = currentCountry === 'uk';
-  const c    = COUNTRY_CONFIG[currentCountry];
-  const whiteLabel = getWhiteLabelSettings();
-  const logoAsset  = await loadPdfLogo(whiteLabel.logoUrl);
+  pdfErr.classList.remove('show');
+  pdfErr.textContent = '';
+  pdfBtn.disabled = true;
+  pdfBtnLabel.textContent = loadingBtnLabel;
 
-  // ==== FORMATTERS ====
-  // Unicode-capable font allows locale-native punctuation and accents.
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const hasUnicodeFont = await registerUnicodePdfFont(doc);
+    const PDF_FONT = hasUnicodeFont ? 'NotoSans' : 'helvetica';
+    const W = 210, PH = 297, MG = 18, CW = W - MG * 2;
+    const isUK = currentCountry === 'uk';
+    const c    = COUNTRY_CONFIG[currentCountry];
+    const whiteLabel = getWhiteLabelSettings();
+    const logoAsset  = await loadPdfLogo(whiteLabel.logoUrl);
 
-  function fmtAmount(amount) {
-    return new Intl.NumberFormat(c.locale, {
-      style: 'currency',
-      currency: c.currencyCode,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(Math.round(amount));
-  }
+    // ==== FORMATTERS ====
+    // Unicode-capable font allows locale-native punctuation and accents.
 
-  function fmtRate(amount) {
-    return fmtAmount(amount) + (isUK ? '/day' : '/jour');
-  }
+    function fmtAmount(amount) {
+      return new Intl.NumberFormat(c.locale, {
+        style: 'currency',
+        currency: c.currencyCode,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(Math.round(amount));
+    }
 
-  function fmtPct(pct) {
-    return Math.round(pct) + '%';
-  }
+    function fmtRate(amount) {
+      return fmtAmount(amount) + (isUK ? '/day' : '/jour');
+    }
 
-  const STR = isUK ? {
+    function fmtPct(pct) {
+      return Math.round(pct) + '%';
+    }
+
+    const STR = isUK ? {
     country:        'United Kingdom',
     dealSummary:    'Deal Summary',
     generated:      'Generated: ',
@@ -1265,64 +1302,71 @@ async function generatePDF() {
     moreLabel:      'de revenu net supplémentaire vs portage',
   };
 
-  // ==== DATE ====
-  const now = new Date();
-  const dateStr = now.toLocaleDateString(c.locale);
+    // ==== DATE ====
+    const now = new Date();
+    const dateStr = now.toLocaleDateString(c.locale);
 
-  // ==== COLORS ====
-  const NAVY  = [27,58,92];   const BLACK = [26,25,21];
-  const MUTED = [107,105,96]; const SURF  = [246,245,242];
-  const BDR   = [226,223,216]; const WHITE = [255,255,255];
-  const GREEN = [45,106,79];  const AMBER  = [146,88,10];
-  const ACBG  = [232,239,246];
+    // ==== COLORS ====
+    const NAVY  = [27,58,92];   const BLACK = [26,25,21];
+    const MUTED = [107,105,96]; const SURF  = [246,245,242];
+    const BDR   = [226,223,216]; const WHITE = [255,255,255];
+    const GREEN = [45,106,79];  const AMBER  = [146,88,10];
+    const ACBG  = [232,239,246];
 
-  const setF = col => doc.setFillColor(...col);
-  const setD = col => doc.setDrawColor(...col);
-  const setT = col => doc.setTextColor(...col);
+    const setF = col => doc.setFillColor(...col);
+    const setD = col => doc.setDrawColor(...col);
+    const setT = col => doc.setTextColor(...col);
 
-  function txt(s, x, y, sz, col, align='left', bold=false) {
-    doc.setFontSize(sz); setT(col); doc.setFont(PDF_FONT, bold ? 'bold' : 'normal');
-    if (align==='center') doc.text(String(s),x,y,{align:'center'});
-    else if (align==='right') doc.text(String(s),x,y,{align:'right'});
-    else doc.text(String(s),x,y);
-  }
+    function txt(s, x, y, sz, col, align='left', bold=false) {
+      doc.setFontSize(sz); setT(col); doc.setFont(PDF_FONT, bold ? 'bold' : 'normal');
+      if (align==='center') doc.text(String(s),x,y,{align:'center'});
+      else if (align==='right') doc.text(String(s),x,y,{align:'right'});
+      else doc.text(String(s),x,y);
+    }
 
-  function hl(x1,y,x2,col=BDR) { setD(col); doc.setLineWidth(0.3); doc.line(x1,y,x2,y); }
+    function hl(x1,y,x2,col=BDR) { setD(col); doc.setLineWidth(0.3); doc.line(x1,y,x2,y); }
 
-  function row(label, value, y, bold=false) {
-    txt(label, MG, y, 9, MUTED);
-    txt(value, W-MG, y, 9, BLACK, 'right', bold);
-  }
+    function row(label, value, y, bold=false) {
+      txt(label, MG, y, 9, MUTED);
+      txt(value, W-MG, y, 9, BLACK, 'right', bold);
+    }
 
-  function ensureSpace(requiredHeight) {
-    const bottomLimit = PH - 22;
-    if (y + requiredHeight <= bottomLimit) return;
-    doc.addPage();
-    y = 22;
-  }
+    function ensureSpace(requiredHeight) {
+      const bottomLimit = PH - 22;
+      if (y + requiredHeight <= bottomLimit) return;
+      doc.addPage();
+      y = 22;
+    }
 
-  function sectionHeader(label) {
-    txt(label, MG, y, 7.2, MUTED, 'left', true);
-    y += 4;
-    hl(MG, y, W - MG);
-    y += 7;
-  }
+    function sectionHeader(label) {
+      txt(label, MG, y, 7.2, MUTED, 'left', true);
+      y += 4;
+      hl(MG, y, W - MG);
+      y += 7;
+    }
 
-  // ==== HEADER ====
-  setF(NAVY); doc.rect(0,0,W,28,'F');
-  const brandX = logoAsset ? MG + 20 : MG;
-  if (logoAsset) {
-    doc.addImage(logoAsset.dataUrl, logoAsset.format, MG, 6, 14, 14);
-  }
-  txt(whiteLabel.agencyName, brandX, 11, 13, WHITE, 'left', true);
-  if (whiteLabel.agencyName === 'RateBridge') {
-    txt('.io', brandX + 22, 11, 12, [160,180,200]);
-  }
-  txt('[' + STR.country + '] ' + STR.dealSummary, MG, 20, 8, [160,185,210]);
-  txt(STR.generated + dateStr, W-MG, 11, 7.5, [160,185,210], 'right');
-  txt(STR.pdfHeader, W-MG, 20, 7.5, [130,160,190], 'right');
+    // ==== HEADER ====
+    setF(NAVY); doc.rect(0,0,W,28,'F');
+    let brandX = MG;
+    if (logoAsset) {
+      const maxLogoW = 26;
+      const maxLogoH = 12;
+      const logoScale = Math.min(maxLogoW / logoAsset.width, maxLogoH / logoAsset.height, 1);
+      const logoW = Math.max(8, logoAsset.width * logoScale);
+      const logoH = Math.max(8, logoAsset.height * logoScale);
+      const logoY = 7 + (maxLogoH - logoH) / 2;
+      doc.addImage(logoAsset.dataUrl, logoAsset.format, MG, logoY, logoW, logoH);
+      brandX = MG + logoW + 4;
+    }
+    txt(whiteLabel.agencyName, brandX, 11, 13, WHITE, 'left', true);
+    if (whiteLabel.agencyName === 'RateBridge') {
+      txt('.io', brandX + 22, 11, 12, [160,180,200]);
+    }
+    txt('[' + STR.country + '] ' + STR.dealSummary, MG, 20, 8, [160,185,210]);
+    txt(STR.generated + dateStr, W-MG, 11, 7.5, [160,185,210], 'right');
+    txt(STR.pdfHeader, W-MG, 20, 7.5, [130,160,190], 'right');
 
-  let y = 40;
+    let y = 40;
 
   // ==== INPUTS ====
   sectionHeader(STR.inputs);
@@ -1429,8 +1473,15 @@ async function generatePDF() {
   txt(footerLeft, MG, PH-7, 7, MUTED);
   txt(whiteLabel.contactEmail, W-MG, PH-7, 7, MUTED, 'right');
 
-  const dateSlug = now.toISOString().slice(0,10);
-  doc.save(c.pdfFileName + '-' + lastInputs.baseScenario + '-' + dateSlug + '.pdf');
+    const dateSlug = now.toISOString().slice(0,10);
+    doc.save(c.pdfFileName + '-' + lastInputs.baseScenario + '-' + dateSlug + '.pdf');
+  } catch (err) {
+    pdfErr.textContent = errorLabel;
+    pdfErr.classList.add('show');
+  } finally {
+    pdfBtn.disabled = false;
+    pdfBtnLabel.textContent = defaultBtnLabel;
+  }
 }
 
 // ==== HANDLE PILOT CLICK ====
@@ -1459,6 +1510,7 @@ document.getElementById('day-rate-input').addEventListener('keydown', e => {
 });
 
 initAnalytics();
+initOutreachVariant();
 
 ['factor-a-input', 'factor-b-input'].forEach(id => {
   document.getElementById(id).addEventListener('change', e => {
