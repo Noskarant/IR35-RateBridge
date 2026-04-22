@@ -291,6 +291,54 @@
     .btn-pilot-main { flex-shrink: 0; padding: 11px 20px; background: white; color: var(--accent); border: none; border-radius: var(--radius); font-size: 13px; font-weight: 600; font-family: var(--font); cursor: pointer; white-space: nowrap; transition: opacity .15s; }
     .btn-pilot-main:hover { opacity: .9; }
 
+    /* Premium offer modal */
+    .premium-modal {
+      position: fixed; inset: 0; background: rgba(12,18,24,.55);
+      display: none; align-items: center; justify-content: center; z-index: 120;
+      padding: 16px;
+    }
+    .premium-modal.show { display: flex; }
+    .premium-panel {
+      width: 100%; max-width: 620px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); box-shadow: 0 16px 40px rgba(0,0,0,.18); overflow: hidden;
+    }
+    .premium-head {
+      background: var(--accent); color: white; padding: 18px 20px 16px; position: relative;
+    }
+    .premium-kicker { font-size: 11px; font-family: var(--mono); opacity: .8; letter-spacing: .06em; text-transform: uppercase; }
+    .premium-head h3 { font-size: 20px; margin-top: 4px; line-height: 1.25; }
+    .premium-close {
+      position: absolute; right: 12px; top: 10px; border: none; background: transparent;
+      color: rgba(255,255,255,.85); font-size: 20px; cursor: pointer; line-height: 1; padding: 4px;
+    }
+    .premium-body { padding: 16px 20px 18px; }
+    .premium-body p { font-size: 13px; color: var(--text-2); margin-bottom: 12px; line-height: 1.6; }
+    .premium-benefits { margin: 0 0 14px 0; padding-left: 17px; }
+    .premium-benefits li { font-size: 13px; color: var(--text); margin-bottom: 6px; }
+    .plan-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .plan-card {
+      border: 1px solid var(--border-s); border-radius: var(--radius); background: var(--surface);
+      padding: 10px; position: relative;
+    }
+    .plan-card.rec { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(27,58,92,.08); }
+    .plan-tag {
+      position: absolute; top: -8px; right: 8px; background: var(--accent); color: white;
+      font-size: 9px; font-family: var(--mono); text-transform: uppercase; letter-spacing: .05em;
+      border-radius: 4px; padding: 2px 6px;
+    }
+    .plan-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+    .plan-meta { font-size: 11px; color: var(--text-3); margin-bottom: 8px; }
+    .plan-btn {
+      width: 100%; border: 1px solid var(--border-s); background: var(--surface-2); border-radius: 6px;
+      padding: 9px 8px; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text);
+      transition: border-color .15s, background .15s;
+    }
+    .plan-btn:hover { border-color: var(--accent); background: var(--accent-light); }
+    .premium-note {
+      margin-top: 12px; font-size: 11px; color: var(--text-3); line-height: 1.55;
+      background: var(--surface-2); border-radius: 6px; padding: 10px 11px;
+    }
+
     /* ==== CONTACT ==== */
     .contact-block { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px 24px; box-shadow: var(--shadow); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
     .contact-copy h3 { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
@@ -321,6 +369,7 @@
       .equiv-row { flex-direction: column; align-items: flex-start; gap: 6px; }
       .equiv-sub { text-align: left; }
       .country-pills { grid-template-columns: 1fr; }
+      .plan-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -611,6 +660,44 @@
   </p>
 </footer>
 
+<!-- Premium offer modal -->
+<div class="premium-modal" id="premium-modal" aria-hidden="true">
+  <div class="premium-panel" role="dialog" aria-modal="true" aria-labelledby="premium-title">
+    <div class="premium-head">
+      <button class="premium-close" onclick="closePremiumOffer()" aria-label="Close">×</button>
+      <div class="premium-kicker">Agency pilot offer</div>
+      <h3 id="premium-title">Upgrade to client-ready branded exports</h3>
+    </div>
+    <div class="premium-body">
+      <p>Win trust faster with professional, agency-branded summaries you can share with clients, candidates, and internal stakeholders.</p>
+      <ul class="premium-benefits">
+        <li>Agency-branded PDF summaries with your logo and contact details</li>
+        <li>Recruiter-ready exports that are easier to present and forward</li>
+        <li>Pilot onboarding with early access and direct feedback/support</li>
+      </ul>
+      <div class="plan-grid">
+        <div class="plan-card">
+          <div class="plan-name">Monthly</div>
+          <div class="plan-meta">Flexible start</div>
+          <button class="plan-btn" onclick="selectPremiumPlan('monthly')">Choose Monthly</button>
+        </div>
+        <div class="plan-card rec">
+          <div class="plan-tag">Recommended</div>
+          <div class="plan-name">Quarterly</div>
+          <div class="plan-meta">Best pilot fit</div>
+          <button class="plan-btn" onclick="selectPremiumPlan('quarterly')">Choose Quarterly</button>
+        </div>
+        <div class="plan-card">
+          <div class="plan-name">Annual</div>
+          <div class="plan-meta">Long-term rollout</div>
+          <button class="plan-btn" onclick="selectPremiumPlan('annual')">Choose Annual</button>
+        </div>
+      </div>
+      <div class="premium-note">After payment, pilot access setup is confirmed manually. We’ll contact you shortly after checkout.</div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ==== CONFIG ====
 const APP_CONFIG = {
@@ -618,12 +705,22 @@ const APP_CONFIG = {
   // You can also override at runtime with:
   // window.RATEBRIDGE_CONFIG = { stripeCheckoutUrl: '...', bookingUrl: '...', plausibleDomain: '...' }
   stripeCheckoutUrl: 'https://buy.stripe.com/REPLACE_ME',
+  stripePlanUrls: {
+    monthly:   'https://buy.stripe.com/REPLACE_ME_MONTHLY',
+    quarterly: 'https://buy.stripe.com/REPLACE_ME_QUARTERLY',
+    annual:    'https://buy.stripe.com/REPLACE_ME_ANNUAL'
+  },
   bookingUrl:        'https://calendly.com/REPLACE_ME',
   plausibleDomain:   'REPLACE_ME'
 };
 
 const RUNTIME_CONFIG = window.RATEBRIDGE_CONFIG || {};
 const STRIPE_CHECKOUT_URL = RUNTIME_CONFIG.stripeCheckoutUrl || APP_CONFIG.stripeCheckoutUrl;
+const STRIPE_PLAN_URLS    = {
+  monthly:   (RUNTIME_CONFIG.stripePlanUrls && RUNTIME_CONFIG.stripePlanUrls.monthly) || APP_CONFIG.stripePlanUrls.monthly || STRIPE_CHECKOUT_URL,
+  quarterly: (RUNTIME_CONFIG.stripePlanUrls && RUNTIME_CONFIG.stripePlanUrls.quarterly) || APP_CONFIG.stripePlanUrls.quarterly,
+  annual:    (RUNTIME_CONFIG.stripePlanUrls && RUNTIME_CONFIG.stripePlanUrls.annual) || APP_CONFIG.stripePlanUrls.annual
+};
 const BOOKING_URL         = RUNTIME_CONFIG.bookingUrl || APP_CONFIG.bookingUrl;
 const PLAUSIBLE_DOMAIN    = RUNTIME_CONFIG.plausibleDomain || APP_CONFIG.plausibleDomain;
 const CONTACT_EMAIL       = 'hello@ratebridge.io';
@@ -830,6 +927,31 @@ function trackEvent(name, payload = {}) {
 
 function hasConfiguredLink(url) {
   return /^https?:\/\//.test(url) && !url.includes('REPLACE_ME');
+}
+
+function openPremiumOffer() {
+  const modal = document.getElementById('premium-modal');
+  modal.classList.add('show');
+  modal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+  trackEvent('premium_offer_opened', { country: currentCountry || 'uk' });
+}
+
+function closePremiumOffer() {
+  const modal = document.getElementById('premium-modal');
+  modal.classList.remove('show');
+  modal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+function selectPremiumPlan(plan) {
+  const planUrl = STRIPE_PLAN_URLS[plan];
+  trackEvent('premium_plan_selected', { country: currentCountry || 'uk', plan });
+  if (!hasConfiguredLink(planUrl)) {
+    window.location.href = 'mailto:'+CONTACT_EMAIL+'?subject=RateBridge Pilot Access (' + plan + ')&body=Hi, I would like pilot access (' + plan + ' plan).';
+    return;
+  }
+  window.open(planUrl, '_blank');
 }
 
 function isValidEmail(email) {
@@ -1487,11 +1609,7 @@ async function generatePDF() {
 // ==== HANDLE PILOT CLICK ====
 function handlePilotClick() {
   trackEvent('pilot_cta_clicked', { country: currentCountry });
-  if (!hasConfiguredLink(STRIPE_CHECKOUT_URL)) {
-    window.location.href = 'mailto:'+CONTACT_EMAIL+'?subject=RateBridge Pilot Access&body=Hi, I would like pilot access for my agency.';
-  } else {
-    window.open(STRIPE_CHECKOUT_URL, '_blank');
-  }
+  openPremiumOffer();
 }
 
 // ==== HANDLE BOOK CLICK ====
@@ -1511,6 +1629,14 @@ document.getElementById('day-rate-input').addEventListener('keydown', e => {
 
 initAnalytics();
 initOutreachVariant();
+
+document.getElementById('premium-modal').addEventListener('click', e => {
+  if (e.target.id === 'premium-modal') closePremiumOffer();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closePremiumOffer();
+});
 
 ['factor-a-input', 'factor-b-input'].forEach(id => {
   document.getElementById(id).addEventListener('change', e => {
