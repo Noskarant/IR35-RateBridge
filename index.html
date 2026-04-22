@@ -215,6 +215,22 @@
     }
     .assump-help { margin-top: 6px; font-size: 11px; color: var(--text-3); }
 
+    /* White-label (PDF only) */
+    .wl-box {
+      margin-bottom: 16px; padding: 12px;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--surface);
+    }
+    .wl-title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+    .wl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .wl-field label { display: block; font-size: 11px; color: var(--text-2); margin-bottom: 4px; }
+    .wl-field input {
+      width: 100%; padding: 8px 10px; border: 1px solid var(--border-s); border-radius: 6px;
+      font-size: 13px; font-family: var(--font); background: var(--surface);
+    }
+    .wl-field.wl-full { grid-column: 1 / -1; }
+    .wl-help { margin-top: 6px; font-size: 11px; color: var(--text-3); }
+
     /* ==== DIVIDER ==== */
     .hr { height: 1px; background: var(--border); margin: 0 20px; }
 
@@ -393,8 +409,8 @@
       </div>
       <div class="how-item">
         <div class="how-num">3</div>
-        <div class="how-title">Compare instantly</div>
-        <div class="how-desc">See take-home difference and the equivalent bridging rate.</div>
+        <div class="how-title" id="how-3-title">Compare instantly</div>
+        <div class="how-desc" id="how-3-desc">See take-home difference and the equivalent bridging rate.</div>
       </div>
     </div>
 
@@ -442,8 +458,8 @@
           <!-- Assumptions -->
           <div class="assump-box">
             <div class="assump-head">
-              <div class="assump-title">Model assumptions (editable)</div>
-              <button class="btn-reset-assump" type="button" onclick="resetAssumptionsToDefaults()">Reset defaults</button>
+              <div class="assump-title" id="assump-title">Model assumptions (editable)</div>
+              <button class="btn-reset-assump" type="button" onclick="resetAssumptionsToDefaults()" id="assump-reset-btn">Reset defaults</button>
             </div>
             <div class="assump-grid">
               <div class="assump-item">
@@ -461,7 +477,27 @@
                 </div>
               </div>
             </div>
-            <div class="assump-help">Estimate-only model. Typical range: 30%–90%.</div>
+            <div class="assump-help" id="assump-help">Estimate-only model. Typical range: 30%–90%.</div>
+          </div>
+
+          <!-- White-label (PDF only) -->
+          <div class="wl-box">
+            <div class="wl-title" id="wl-title">PDF white-label (optional)</div>
+            <div class="wl-grid">
+              <div class="wl-field">
+                <label for="wl-agency-name" id="wl-agency-label">Agency Name</label>
+                <input type="text" id="wl-agency-name" placeholder="e.g. Brightstone Talent" />
+              </div>
+              <div class="wl-field">
+                <label for="wl-contact-email" id="wl-contact-label">Contact Email</label>
+                <input type="email" id="wl-contact-email" placeholder="e.g. team@agency.com" />
+              </div>
+              <div class="wl-field wl-full">
+                <label for="wl-logo-url" id="wl-logo-label">Logo URL (optional)</label>
+                <input type="url" id="wl-logo-url" placeholder="https://..." />
+              </div>
+            </div>
+            <div class="wl-help" id="wl-help">Used only in PDF exports. Leave empty to use default RateBridge branding.</div>
           </div>
 
         <!-- Days slider -->
@@ -576,8 +612,19 @@
 
 <script>
 // ==== CONFIG ====
-const STRIPE_CHECKOUT_URL = 'https://buy.stripe.com/REPLACE_ME';
-const BOOKING_URL         = 'https://calendly.com/REPLACE_ME';
+const APP_CONFIG = {
+  // Replace these with your live URLs for outreach traffic.
+  // You can also override at runtime with:
+  // window.RATEBRIDGE_CONFIG = { stripeCheckoutUrl: '...', bookingUrl: '...', plausibleDomain: '...' }
+  stripeCheckoutUrl: 'https://buy.stripe.com/REPLACE_ME',
+  bookingUrl:        'https://calendly.com/REPLACE_ME',
+  plausibleDomain:   'REPLACE_ME'
+};
+
+const RUNTIME_CONFIG = window.RATEBRIDGE_CONFIG || {};
+const STRIPE_CHECKOUT_URL = RUNTIME_CONFIG.stripeCheckoutUrl || APP_CONFIG.stripeCheckoutUrl;
+const BOOKING_URL         = RUNTIME_CONFIG.bookingUrl || APP_CONFIG.bookingUrl;
+const PLAUSIBLE_DOMAIN    = RUNTIME_CONFIG.plausibleDomain || APP_CONFIG.plausibleDomain;
 const CONTACT_EMAIL       = 'hello@ratebridge.io';
 
 // ==== COUNTRY CONFIG ====
@@ -602,6 +649,8 @@ const COUNTRY_CONFIG = {
     how1Desc:       'Input the contractor\'s current or proposed day rate in GBP.',
     how2Title:      'Choose IR35 scenario',
     how2Desc:       'Select whether the base rate is Outside or Inside IR35.',
+    how3Title:      'Compare instantly',
+    how3Desc:       'See take-home difference and the equivalent bridging rate.',
     calcTitle:      'Rate Comparison Calculator',
     rateLabel:      'Day Rate',
     rateHint:       '£/day',
@@ -616,6 +665,14 @@ const COUNTRY_CONFIG = {
     equivSublabel:  'to preserve a similar take-home',
     equivDayLabel:  '/day equivalent',
     contactTitle:   'Want pilot access for your agency?',
+    assumpTitle:    'Model assumptions (editable)',
+    assumpReset:    'Reset defaults',
+    assumpHelp:     'Estimate-only model. Typical range: 30%–90%.',
+    wlTitle:        'PDF white-label (optional)',
+    wlAgencyLabel:  'Agency Name',
+    wlContactLabel: 'Contact Email',
+    wlLogoLabel:    'Logo URL (optional)',
+    wlHelp:         'Used only in PDF exports. Leave empty to use default RateBridge branding.',
     headerLabel:    'UK IR35 Rate Comparison',
     barLabel:       '🇬🇧 United Kingdom — Outside vs Inside IR35',
     pdfHeader:      'UK Contractor IR35 Rate Comparison',
@@ -643,6 +700,8 @@ const COUNTRY_CONFIG = {
     how1Desc:       'Saisissez le taux journalier moyen actuel ou proposé en euros.',
     how2Title:      'Choisissez le statut',
     how2Desc:       'Indiquez si le TJM de base est en Freelance (EURL/SASU) ou en Portage salarial.',
+    how3Title:      'Comparez immédiatement',
+    how3Desc:       'Visualisez l’écart de revenu net et le TJM équivalent de compensation.',
     calcTitle:      'Comparateur de TJM',
     rateLabel:      'TJM (Taux Journalier Moyen)',
     rateHint:       '€/jour',
@@ -657,6 +716,14 @@ const COUNTRY_CONFIG = {
     equivSublabel:  'pour un revenu net similaire',
     equivDayLabel:  '/jour équivalent',
     contactTitle:   'Vous voulez accès pilote pour votre agence ?',
+    assumpTitle:    'Hypothèses du modèle (modifiables)',
+    assumpReset:    'Réinitialiser par défaut',
+    assumpHelp:     'Modèle estimatif uniquement. Plage typique : 30%–90%.',
+    wlTitle:        'Marque blanche PDF (optionnel)',
+    wlAgencyLabel:  'Nom de l’agence',
+    wlContactLabel: 'Email de contact',
+    wlLogoLabel:    'URL du logo (optionnel)',
+    wlHelp:         'Utilisé uniquement dans les exports PDF. Laissez vide pour utiliser la marque RateBridge par défaut.',
     headerLabel:    'Comparateur TJM France',
     barLabel:       '🇫🇷 France — Freelance vs Portage salarial',
     pdfHeader:      'Comparateur TJM — France',
@@ -732,8 +799,71 @@ async function registerUnicodePdfFont(doc) {
 }
 
 // ==== TRACKING ====
+let analyticsReady = false;
+
+function initAnalytics() {
+  if (!PLAUSIBLE_DOMAIN || PLAUSIBLE_DOMAIN.includes('REPLACE_ME')) return;
+  if (document.querySelector('script[data-ratebridge-analytics="plausible"]')) return;
+
+  const script = document.createElement('script');
+  script.defer = true;
+  script.setAttribute('data-domain', PLAUSIBLE_DOMAIN);
+  script.setAttribute('data-api', 'https://plausible.io/api/event');
+  script.setAttribute('data-ratebridge-analytics', 'plausible');
+  script.src = 'https://plausible.io/js/script.js';
+  script.onload = () => { analyticsReady = true; };
+  document.head.appendChild(script);
+}
+
 function trackEvent(name, payload = {}) {
-  console.log('[RateBridge]', name, payload);
+  if (window.plausible && analyticsReady) {
+    window.plausible(name, { props: payload });
+  }
+}
+
+function hasConfiguredLink(url) {
+  return /^https?:\/\//.test(url) && !url.includes('REPLACE_ME');
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function isLikelyHttpUrl(url) {
+  return /^https?:\/\/.+/i.test(url);
+}
+
+function getWhiteLabelSettings() {
+  const agencyNameRaw = document.getElementById('wl-agency-name')?.value?.trim() || '';
+  const contactEmailRaw = document.getElementById('wl-contact-email')?.value?.trim() || '';
+  const logoUrlRaw = document.getElementById('wl-logo-url')?.value?.trim() || '';
+
+  return {
+    agencyName: agencyNameRaw || 'RateBridge',
+    contactEmail: isValidEmail(contactEmailRaw) ? contactEmailRaw : CONTACT_EMAIL,
+    logoUrl: isLikelyHttpUrl(logoUrlRaw) ? logoUrlRaw : ''
+  };
+}
+
+async function loadPdfLogo(logoUrl) {
+  if (!logoUrl) return null;
+  try {
+    const res = await fetch(logoUrl);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    if (!blob.type.startsWith('image/')) return null;
+    if (!(blob.type.includes('png') || blob.type.includes('jpeg') || blob.type.includes('jpg'))) return null;
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    const format = blob.type.includes('png') ? 'PNG' : 'JPEG';
+    return { dataUrl, format };
+  } catch {
+    return null;
+  }
 }
 
 // ==== FORMAT CURRENCY ====
@@ -777,6 +907,7 @@ function changeCountry() {
 // ==== APPLY COUNTRY CONFIG ====
 function applyCountryConfig(country) {
   const c = COUNTRY_CONFIG[country];
+  document.documentElement.lang = country === 'fr' ? 'fr' : 'en';
 
   document.getElementById('header-label').textContent   = c.headerLabel;
   document.getElementById('hero-title').innerHTML        = c.heroTitle;
@@ -788,6 +919,8 @@ function applyCountryConfig(country) {
   document.getElementById('how-1-desc').textContent      = c.how1Desc;
   document.getElementById('how-2-title').textContent     = c.how2Title;
   document.getElementById('how-2-desc').textContent      = c.how2Desc;
+  document.getElementById('how-3-title').textContent     = c.how3Title;
+  document.getElementById('how-3-desc').textContent      = c.how3Desc;
   document.getElementById('calc-title').textContent      = c.calcTitle;
   document.getElementById('rate-label').textContent      = c.rateLabel;
   document.getElementById('rate-hint').textContent       = c.rateHint;
@@ -807,6 +940,14 @@ function applyCountryConfig(country) {
   document.getElementById('equiv-sublabel').textContent  = c.equivSublabel;
   document.getElementById('equiv-day-label').textContent = c.equivDayLabel;
   document.getElementById('contact-title').textContent   = c.contactTitle;
+  document.getElementById('assump-title').textContent    = c.assumpTitle;
+  document.getElementById('assump-reset-btn').textContent = c.assumpReset;
+  document.getElementById('assump-help').textContent     = c.assumpHelp;
+  document.getElementById('wl-title').textContent        = c.wlTitle;
+  document.getElementById('wl-agency-label').textContent = c.wlAgencyLabel;
+  document.getElementById('wl-contact-label').textContent = c.wlContactLabel;
+  document.getElementById('wl-logo-label').textContent   = c.wlLogoLabel;
+  document.getElementById('wl-help').textContent         = c.wlHelp;
   document.getElementById('factor-a-label').textContent  = c.scenarioAName + ' net factor';
   document.getElementById('factor-b-label').textContent  = c.scenarioBName + ' net factor';
 
@@ -1039,6 +1180,8 @@ async function generatePDF() {
   const W = 210, PH = 297, MG = 18, CW = W - MG * 2;
   const isUK = currentCountry === 'uk';
   const c    = COUNTRY_CONFIG[currentCountry];
+  const whiteLabel = getWhiteLabelSettings();
+  const logoAsset  = await loadPdfLogo(whiteLabel.logoUrl);
 
   // ==== FORMATTERS ====
   // Unicode-capable font allows locale-native punctuation and accents.
@@ -1167,8 +1310,14 @@ async function generatePDF() {
 
   // ==== HEADER ====
   setF(NAVY); doc.rect(0,0,W,28,'F');
-  txt('RateBridge', MG, 11, 15, WHITE, 'left', true);
-  txt('.io', MG+22, 11, 12, [160,180,200]);
+  const brandX = logoAsset ? MG + 20 : MG;
+  if (logoAsset) {
+    doc.addImage(logoAsset.dataUrl, logoAsset.format, MG, 6, 14, 14);
+  }
+  txt(whiteLabel.agencyName, brandX, 11, 13, WHITE, 'left', true);
+  if (whiteLabel.agencyName === 'RateBridge') {
+    txt('.io', brandX + 22, 11, 12, [160,180,200]);
+  }
   txt('[' + STR.country + '] ' + STR.dealSummary, MG, 20, 8, [160,185,210]);
   txt(STR.generated + dateStr, W-MG, 11, 7.5, [160,185,210], 'right');
   txt(STR.pdfHeader, W-MG, 20, 7.5, [130,160,190], 'right');
@@ -1274,8 +1423,11 @@ async function generatePDF() {
   // ==== FOOTER ====
   setF(SURF); doc.rect(0,PH-14,W,14,'F');
   hl(0,PH-14,W,BDR);
-  txt(STR.footerLeft, MG, PH-7, 7, MUTED);
-  txt(CONTACT_EMAIL, W-MG, PH-7, 7, MUTED, 'right');
+  const footerLeft = whiteLabel.agencyName === 'RateBridge'
+    ? STR.footerLeft
+    : (whiteLabel.agencyName + ' — ' + (isUK ? 'IR35 Rate Comparison' : 'Comparateur TJM'));
+  txt(footerLeft, MG, PH-7, 7, MUTED);
+  txt(whiteLabel.contactEmail, W-MG, PH-7, 7, MUTED, 'right');
 
   const dateSlug = now.toISOString().slice(0,10);
   doc.save(c.pdfFileName + '-' + lastInputs.baseScenario + '-' + dateSlug + '.pdf');
@@ -1284,7 +1436,7 @@ async function generatePDF() {
 // ==== HANDLE PILOT CLICK ====
 function handlePilotClick() {
   trackEvent('pilot_cta_clicked', { country: currentCountry });
-  if (STRIPE_CHECKOUT_URL.includes('REPLACE_ME')) {
+  if (!hasConfiguredLink(STRIPE_CHECKOUT_URL)) {
     window.location.href = 'mailto:'+CONTACT_EMAIL+'?subject=RateBridge Pilot Access&body=Hi, I would like pilot access for my agency.';
   } else {
     window.open(STRIPE_CHECKOUT_URL, '_blank');
@@ -1294,7 +1446,7 @@ function handlePilotClick() {
 // ==== HANDLE BOOK CLICK ====
 function handleBookClick() {
   trackEvent('book_walkthrough_clicked', { country: currentCountry });
-  if (BOOKING_URL.includes('REPLACE_ME')) {
+  if (!hasConfiguredLink(BOOKING_URL)) {
     window.location.href = 'mailto:'+CONTACT_EMAIL+'?subject=Book a RateBridge Walkthrough';
   } else {
     window.open(BOOKING_URL, '_blank');
@@ -1305,6 +1457,8 @@ function handleBookClick() {
 document.getElementById('day-rate-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') handleCompare();
 });
+
+initAnalytics();
 
 ['factor-a-input', 'factor-b-input'].forEach(id => {
   document.getElementById(id).addEventListener('change', e => {
